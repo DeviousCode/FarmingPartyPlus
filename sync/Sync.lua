@@ -31,7 +31,7 @@ end
 
 function FarmingPartyPlusSyncHost:New()
   local obj = ZO_Object.New(self)
-  self:Initialize()
+  obj:Initialize()
   return obj
 end
 
@@ -44,21 +44,21 @@ function FarmingPartyPlusSyncHost:Initialize()
     return
   end
 
-  local handler = lib:RegisterHandler('FarmingPartyPlus', 1)
+  local handler = lib:RegisterHandler('FarmingPartyPlus', 'SyncHost')
   if handler == nil then
     return
   end
 
   local protocol = handler:DeclareProtocol(SYNC_PROTOCOL_ID, 'FarmingPartyPlusSyncLoot')
-  protocol:AddField(lib.CreateStringField('senderCharacterName', 64))
-  protocol:AddField(lib.CreateStringField('senderDisplayName', 64))
-  protocol:AddField(lib.CreateStringField('itemName', 128))
-  protocol:AddField(lib.CreateNumericField('quantity', 16))
-  protocol:AddField(lib.CreateNumericField('itemType', 32))
-  protocol:AddField(lib.CreateNumericField('equipType', 16))
-  protocol:AddField(lib.CreateNumericField('quality', 8))
-  protocol:AddField(lib.CreateNumericField('lootType', 16))
-  protocol:AddField(lib.CreateNumericField('itemValue', 32))
+  protocol:AddField(lib.CreateStringField('senderCharacterName', { maxLength = 64 }))
+  protocol:AddField(lib.CreateStringField('senderDisplayName', { maxLength = 64 }))
+  protocol:AddField(lib.CreateStringField('itemName', { maxLength = 128 }))
+  protocol:AddField(lib.CreateNumericField('quantity', { numBits = 16 }))
+  protocol:AddField(lib.CreateNumericField('itemType', { numBits = 32 }))
+  protocol:AddField(lib.CreateNumericField('equipType', { numBits = 16 }))
+  protocol:AddField(lib.CreateNumericField('quality', { numBits = 8 }))
+  protocol:AddField(lib.CreateNumericField('lootType', { numBits = 16 }))
+  protocol:AddField(lib.CreateNumericField('itemValue', { numBits = 32 }))
   protocol:OnData(function(unitTag, data)
     self:OnData(unitTag, data)
   end)

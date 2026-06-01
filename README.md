@@ -1,3 +1,5 @@
+![Farming Party Plus Banner](fpp.png)
+
 # Farming Party Plus
 
 `Farming Party Plus` is an Elder Scrolls Online addon for tracking party farming loot with a cleaner focus on node runs, material filtering, and host-side event tracking.

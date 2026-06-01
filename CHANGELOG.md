@@ -2,6 +2,12 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [3.0.1] - 2026-06-01
+### Fixed
+- Removed the circular optional dependency between `FarmingPartyPlus` and `FarmingPartyPlusSync`.
+- Updated the `LibGroupBroadcast` integration to match the current handler registration and field option APIs.
+- Fixed sync host object initialization so the receiver module initializes on the created instance.
+
 ## [3.0.0] - 2026-06-01
 ### Added
 - New `FarmingPartyPlus` addon identity, folder, saved variables, slash commands, and bindings so it can coexist with the original `Farming Party`.
