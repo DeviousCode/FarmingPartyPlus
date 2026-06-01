@@ -22,10 +22,11 @@ local Members
 local MemberList
 local Logger
 local Settings
+local Sync
 
 function FarmingPartyPlusLoot:New()
   local obj = ZO_Object.New(self)
-  self:Initialize()
+  obj:Initialize()
   return obj
 end
 
@@ -34,6 +35,7 @@ function FarmingPartyPlusLoot:Initialize()
   MemberList = FarmingPartyPlus.Modules.MemberList
   Logger = FarmingPartyPlus.Modules.Logger
   Settings = FarmingPartyPlus.Settings
+  Sync = FarmingPartyPlus.Modules.Sync
 
   if Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
     self:AddEventHandlers()
@@ -104,6 +106,26 @@ local function GetMember(looterName, lootedByPlayer)
   return nil, nil
 end
 
+local function GetSyncedMember(characterName, displayName)
+  local normalizedCharacterName = zo_strformat(SI_UNIT_NAME, characterName or '')
+  if normalizedCharacterName ~= '' and Members:HasMember(normalizedCharacterName) then
+    return normalizedCharacterName, Members:GetMember(normalizedCharacterName)
+  end
+
+  MemberList:AddAllGroupMembers()
+  if normalizedCharacterName ~= '' and Members:HasMember(normalizedCharacterName) then
+    return normalizedCharacterName, Members:GetMember(normalizedCharacterName)
+  end
+
+  for memberKey, memberData in pairs(Members:GetMembers()) do
+    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
+      return memberKey, memberData
+    end
+  end
+
+  return nil, nil
+end
+
 function FarmingPartyPlusLoot:PassesBaseExclusions(itemLink)
   local _, _, _, equipType = GetItemLinkInfo(itemLink)
   local itemType = GetItemLinkItemType(itemLink)
@@ -118,9 +140,20 @@ function FarmingPartyPlusLoot:PassesBaseExclusions(itemLink)
   return true
 end
 
+function FarmingPartyPlusLoot:PassesBaseExclusionsForData(itemType, equipType)
+  if equipType ~= NOT_EQUIPPABLE and not Settings:TrackGearLoot() then
+    return false
+  end
+  if itemType == ITEMTYPE_RACIAL_STYLE_MOTIF and not Settings:TrackMotifLoot() then
+    return false
+  end
+  return true
+end
+
 function FarmingPartyPlusLoot:ShouldTrackByLegacyRules(itemLink)
   local itemQuality = GetItemLinkQuality(itemLink)
-  if itemQuality < Settings:MinimumLootQuality() then
+  local minimumQuality = tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH
+  if itemQuality < minimumQuality then
     return false
   end
   return true
@@ -155,6 +188,24 @@ function FarmingPartyPlusLoot:ShouldTrackItem(itemLink, lootType)
   return self:ShouldTrackByLegacyRules(itemLink)
 end
 
+function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
+  if data.lootType == LOOT_TYPE_QUEST_ITEM then
+    return false
+  end
+  if not self:PassesBaseExclusionsForData(data.itemType, data.equipType) then
+    return false
+  end
+
+  if Settings:UseWhitelistMode() then
+    if data.itemType == ITEMTYPE_FISH and Settings:IsWhitelistRuleEnabled('__fish_any__') then
+      return true
+    end
+    return Settings:IsWhitelistedItem(zo_strlower(zo_strformat('<<z:1>>', data.itemName or '')))
+  end
+
+  return (data.quality or 0) >= (tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH)
+end
+
 function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, itemSound, lootType, lootedByPlayer)
   if not lootedByPlayer and not Settings:TrackGroupLoot() then
     return
@@ -174,8 +225,32 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
     return
   end
 
+  if Sync ~= nil then
+    Sync:RecordObservedLoot(memberKey, GetItemLinkName(itemLink), quantity, lootType)
+  end
   self:AddNewLootedItem(memberKey, itemLink, itemValue, quantity)
   Logger:LogLootItem(looterMember.displayName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+end
+
+function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
+  if data == nil or not Settings:TrackGroupLoot() then
+    return
+  end
+  if not self:ShouldTrackSyncedData(data) then
+    return
+  end
+
+  local memberKey, looterMember = GetSyncedMember(data.senderCharacterName, data.senderDisplayName)
+  if memberKey == nil or looterMember == nil then
+    return
+  end
+
+  local itemName = data.itemName
+  local itemValue = data.itemValue or 0
+  local quantity = data.quantity or 1
+
+  self:AddNewLootedItem(memberKey, itemName, itemValue, quantity)
+  Logger:LogLootItem(looterMember.displayName, false, itemName, quantity, itemValue * quantity, data.lootType or 0)
 end
 
 function FarmingPartyPlusLoot:AddNewLootedItem(memberName, itemLink, itemValue, count)

@@ -58,14 +58,15 @@
     <Control name="FarmingPartyPlusMemberDataRow" inherits="FarmingPartyPlusListRow" virtual="true">
       <Controls>
         <Label name="$(parent)FarmerId" hidden="true" />
-        <Label name="$(parent)Farmer" inheritAlpha="true" verticalAlignment="CENTER" horizontalAlignment="LEFT" wrapMode="ELLIPSIS" font="EsoUI/Common/Fonts/ProseAntiquePSMT.otf|15">
-          <Dimensions x="200" />
-          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="15" offsetY="0"/>
-        </Label>
+        <Button name="$(parent)FarmerButton" font="EsoUI/Common/Fonts/ProseAntiquePSMT.otf|15" horizontalAlignment="LEFT" verticalAlignment="CENTER">
+          <Dimensions x="200" y="24" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="15" offsetY="3"/>
+          <OnClicked>FarmingPartyPlusMemberItems:SetAndToggle(self:GetParent():GetNamedChild("FarmerId"):GetText())</OnClicked>
+        </Button>
         <Control name="$(parent)BestItemName" inherits="FarmingPartyPlusItemColumn" inheritAlpha="true" mouseEnabled="true">
           <Dimensions x="200" />
-          <Anchor point="TOPLEFT" relativeTo="$(parent)Farmer" relativePoint="TOPRIGHT" offsetX="60" offsetY="0"/>
-          <Anchor point="BOTTOMLEFT" relativeTo="$(parent)Farmer" relativePoint="BOTTOMRIGHT" offsetX="60" offsetY="0"/>
+          <Anchor point="TOPLEFT" relativeTo="$(parent)FarmerButton" relativePoint="TOPRIGHT" offsetX="60" offsetY="-3"/>
+          <Anchor point="BOTTOMLEFT" relativeTo="$(parent)FarmerButton" relativePoint="BOTTOMRIGHT" offsetX="60" offsetY="3"/>
         </Control>
         <Label name="$(parent)TotalValue" inheritAlpha="true" verticalAlignment="CENTER" horizontalAlignment="RIGHT" wrapMode="ELLIPSIS" font="EsoUI/Common/Fonts/ProseAntiquePSMT.otf|15">
           <Dimensions x="100" />

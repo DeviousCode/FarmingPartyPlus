@@ -11,7 +11,7 @@ local function GetItemIcon(itemLink, lootType)
     icon = collectibleIcon
   else
     local itemIcon = GetItemLinkInfo(itemLink)
-    icon = itemIcon
+    icon = itemIcon or ''
   end
   icon = icon ~= '' and ('|t16:16:' .. icon .. '|t ') or ''
   return icon

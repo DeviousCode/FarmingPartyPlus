@@ -4,10 +4,12 @@
 
 ## Title: Farming Party Plus
 ## Description: Tracks group loot with a node-farming whitelist and configurable item filters.
-## Author: Aldanga, updated by Codex
-## Version: 2.15.0-plus
-## APIVersion: 101044
+## Author: DeviousCode
+## Version: 3.0.0
+## AddOnVersion: 30000
+## APIVersion: 101048 101049
 ## DependsOn: LibAddonMenu-2.0 LibAsync LibPrice
+## OptionalDependsOn: LibGroupBroadcast FarmingPartyPlusSync
 ## SavedVariables: FarmingPartyPlusMemberList_db FarmingPartyPlusSettings_db
 
 filters/ItemCatalog.lua
@@ -21,6 +23,7 @@ members/MemberItem.lua
 members/MemberList.lua
 members/MemberItems.lua
 logger/Logger.lua
+sync/Sync.lua
 filters/FilterWindow.lua
 loot/Loot.lua
 Startup.lua

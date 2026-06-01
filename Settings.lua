@@ -1,5 +1,5 @@
 local ADDON_NAME = 'Farming Party Plus'
-local ADDON_VERSION = '2.15.0-plus'
+local ADDON_VERSION = '3.0.0'
 
 local LAM2 = LibAddonMenu2
 
@@ -13,6 +13,16 @@ local qualityChoiceValues = {
   ITEM_QUALITY_ARTIFACT,
   ITEM_QUALITY_LEGENDARY
 }
+
+local qualityChoiceLabels = {'Trash', 'Normal', 'Fine', 'Superior', 'Epic', 'Legendary'}
+local qualityValueByLabel = {}
+for index, label in ipairs(qualityChoiceLabels) do
+  qualityValueByLabel[label] = qualityChoiceValues[index]
+end
+
+local function ColoredHeader(text, color)
+  return string.format('|c%s%s|r', color, text)
+end
 
 local function BuildWhitelistDefaults()
   local itemStates = {}
@@ -112,7 +122,7 @@ function FarmingPartyPlusSettings:Initialize()
     type = 'panel',
     name = ADDON_NAME,
     displayName = ADDON_NAME,
-    author = 'Aldanga / Codex',
+    author = 'DeviousCode',
     version = ADDON_VERSION,
     slashCommand = '/fpp',
     registerForRefresh = true,
@@ -124,7 +134,7 @@ function FarmingPartyPlusSettings:Initialize()
   local optionsTable = {
     {
       type = 'header',
-      name = 'Loot Tracking',
+      name = ColoredHeader('Tracking Mode', 'D9B45A'),
       width = 'full'
     },
     {
@@ -149,9 +159,19 @@ function FarmingPartyPlusSettings:Initialize()
       width = 'full'
     },
     {
+      type = 'description',
+      text = 'Whitelist mode is best for farming events. Legacy mode uses the quality and category filters below.',
+      width = 'full'
+    },
+    {
+      type = 'description',
+      text = '|cCC4444Note: some setting changes fully persist after /reloadui, logout, or exit. This addon will not force a reload.|r',
+      width = 'full'
+    },
+    {
       type = 'dropdown',
       name = 'Minimum Item Quality',
-      choices = {'Trash', 'Normal', 'Fine', 'Superior', 'Epic', 'Legendary'},
+      choices = qualityChoiceLabels,
       choicesValues = qualityChoiceValues,
       tooltip = 'Used when whitelist mode is off.',
       getFunc = function()
@@ -160,6 +180,52 @@ function FarmingPartyPlusSettings:Initialize()
       setFunc = function(value)
         self:ToggleMinimumLootQuality(value)
       end,
+      width = 'full'
+    },
+    {
+      type = 'header',
+      name = ColoredHeader('Loot Sources', '6BC4B2'),
+      width = 'full'
+    },
+    {
+      type = 'checkbox',
+      name = 'Self',
+      tooltip = 'Track items looted by you.',
+      getFunc = function()
+        return self:TrackSelfLoot()
+      end,
+      setFunc = function(value)
+        self:ToggleTrackSelfLoot(value)
+      end,
+      width = 'full'
+    },
+    {
+      type = 'checkbox',
+      name = 'Group members',
+      tooltip = 'Track items looted by group members.',
+      getFunc = function()
+        return self:TrackGroupLoot()
+      end,
+      setFunc = function(value)
+        self:ToggleTrackGroupLoot(value)
+      end,
+      width = 'full'
+    },
+    {
+      type = 'checkbox',
+      name = 'Disable tracking on logout',
+      tooltip = 'This will cause tracking to be disabled on every logout.',
+      getFunc = function()
+        return self:ResetStatusOnLogout()
+      end,
+      setFunc = function(value)
+        self:ToggleResetStatusOnLogout(value)
+      end,
+      width = 'full'
+    },
+    {
+      type = 'header',
+      name = ColoredHeader('Legacy Filters', '9D8CFF'),
       width = 'full'
     },
     {
@@ -187,44 +253,8 @@ function FarmingPartyPlusSettings:Initialize()
       width = 'full'
     },
     {
-      type = 'checkbox',
-      name = 'Group members',
-      tooltip = 'Track items looted by group members.',
-      getFunc = function()
-        return self:TrackGroupLoot()
-      end,
-      setFunc = function(value)
-        self:ToggleTrackGroupLoot(value)
-      end,
-      width = 'full'
-    },
-    {
-      type = 'checkbox',
-      name = 'Self',
-      tooltip = 'Track items looted by you.',
-      getFunc = function()
-        return self:TrackSelfLoot()
-      end,
-      setFunc = function(value)
-        self:ToggleTrackSelfLoot(value)
-      end,
-      width = 'full'
-    },
-    {
-      type = 'checkbox',
-      name = 'Disable tracking on logout',
-      tooltip = 'This will cause tracking to be disabled on every logout.',
-      getFunc = function()
-        return self:ResetStatusOnLogout()
-      end,
-      setFunc = function(value)
-        self:ToggleResetStatusOnLogout(value)
-      end,
-      width = 'full'
-    },
-    {
       type = 'header',
-      name = 'Display Settings',
+      name = ColoredHeader('Display', 'E07A5F'),
       width = 'full'
     },
     {
@@ -327,6 +357,11 @@ function FarmingPartyPlusSettings:Initialize()
       width = 'full'
     },
     {
+      type = 'header',
+      name = ColoredHeader('Windows', '4DA3FF'),
+      width = 'full'
+    },
+    {
       type = 'slider',
       name = 'Loot window background opacity',
       tooltip = 'Change the opacity of the background of the loot window.',
@@ -403,7 +438,7 @@ function FarmingPartyPlusSettings:Initialize()
     },
     {
       type = 'header',
-      name = 'Chat Settings',
+      name = ColoredHeader('Chat', '7BC96F'),
       width = 'full'
     },
     {
@@ -449,7 +484,12 @@ function FarmingPartyPlusSettings:GetSettings()
 end
 
 function FarmingPartyPlusSettings:MinimumLootQuality()
-  return self.settings.minimumLootQuality
+  local value = self.settings.minimumLootQuality
+  if type(value) == 'string' then
+    value = qualityValueByLabel[value] or tonumber(value) or ITEM_QUALITY_TRASH
+    self.settings.minimumLootQuality = value
+  end
+  return value
 end
 
 function FarmingPartyPlusSettings:TrackMotifLoot()
@@ -615,7 +655,10 @@ function FarmingPartyPlusSettings:SetWindowBackgroundTransparency(value)
 end
 
 function FarmingPartyPlusSettings:ToggleMinimumLootQuality(value)
-  self.settings.minimumLootQuality = value
+  if type(value) == 'string' then
+    value = qualityValueByLabel[value] or tonumber(value) or ITEM_QUALITY_TRASH
+  end
+  self.settings.minimumLootQuality = tonumber(value) or ITEM_QUALITY_TRASH
 end
 
 function FarmingPartyPlusSettings:ToggleTrackMotifLoot(value)

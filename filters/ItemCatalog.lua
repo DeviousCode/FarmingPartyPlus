@@ -2,7 +2,7 @@ FarmingPartyPlusItemCatalog = {
   categories = {
     ore = "Ore",
     wood = "Logs",
-    cloth = "Cloth",
+    cloth = "Cloth & Leather",
     jewelry = "Jewelry Dust",
     alchemy = "Alchemy",
     enchanting = "Enchanting",
@@ -103,7 +103,7 @@ FarmingPartyPlusItemCatalog = {
     { key = "dragonthorn", name = "Dragonthorn", category = "alchemy", defaultEnabled = true },
     { key = "lady's smock", name = "Lady's Smock", category = "alchemy", defaultEnabled = true },
     { key = "wormwood", name = "Wormwood", category = "alchemy", defaultEnabled = true },
-    { key = "mountain flower", name = "Mountain Flower", category = "alchemy", defaultEnabled = true }
+    { key = "mountain flower", name = "Mountain Flower", category = "alchemy", defaultEnabled = true },
 
     { key = "jora", name = "Jora", category = "enchanting", defaultEnabled = false },
     { key = "porade", name = "Porade", category = "enchanting", defaultEnabled = false },

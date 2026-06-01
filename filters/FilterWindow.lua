@@ -11,8 +11,12 @@ local function UpdateItemButton(button, itemData)
   button:SetText((isEnabled and '[ON] ' or '[OFF] ') .. itemData.name)
   if isEnabled then
     button:SetNormalFontColor(0.20, 0.90, 0.45, 1)
+    button:SetMouseOverFontColor(0.45, 1.00, 0.65, 1)
+    button:SetPressedFontColor(0.16, 0.75, 0.38, 1)
   else
-    button:SetNormalFontColor(0.80, 0.80, 0.80, 1)
+    button:SetNormalFontColor(1.00, 0.62, 0.62, 1)
+    button:SetMouseOverFontColor(1.00, 0.74, 0.74, 1)
+    button:SetPressedFontColor(0.88, 0.50, 0.50, 1)
   end
 end
 

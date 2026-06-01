@@ -73,6 +73,7 @@ function FarmingPartyPlus:Initialize()
   self.Modules.Logger = FarmingPartyPlusLogger:New()
   self.Modules.MemberItems = FarmingPartyPlusMemberItems:New()
   self.Modules.FilterWindow = FarmingPartyPlusFilterWindow:New()
+  self.Modules.Sync = FarmingPartyPlusSyncHost:New()
   self.Modules.Loot = FarmingPartyPlusLoot:New()
 end
 
@@ -93,21 +94,7 @@ function FarmingPartyPlus:Reset()
 end
 
 function FarmingPartyPlus:ConsoleCommands()
-  SLASH_COMMANDS['/fpphelp'] = function()
-    d('-- Farming Party Plus commands --')
-    d('/fpp                  Show or hide the highscore window.')
-    d('/fpp prune            Removes members no longer in group.')
-    d('/fpp reset            Resets all loot data.')
-    d('/fpp [start|stop]     Start or stop loot tracking.')
-    d('/fpp [status]         Show loot tracking status.')
-    d('/fpp update           Sync tracked members with current group.')
-    d('/fpp filters          Open the node whitelist window.')
-    d('/fpp whitelist on     Count only selected whitelist items.')
-    d('/fpp whitelist off    Use the original quality-based filters.')
-    d('/fppc                 Put score output into the chat box.')
-  end
-
-  SLASH_COMMANDS['/fpp'] = function(param)
+  local function HandleMainCommand(param)
     local trimmedParam = string.gsub(param or '', '%s+$', ''):lower()
     if trimmedParam == '' then
       self.Modules.MemberList:ToggleMembersWindow()
@@ -135,6 +122,12 @@ function FarmingPartyPlus:ConsoleCommands()
       self:UpdateMembers()
     elseif trimmedParam == 'filters' then
       self.Modules.FilterWindow:ToggleWindow()
+    elseif trimmedParam == 'sync' then
+      if self.Modules.Sync ~= nil and self.Modules.Sync:IsEnabled() then
+        d('[Farming Party Plus]: Optional sync receiver is enabled')
+      else
+        d('[Farming Party Plus]: Optional sync receiver is disabled or LibGroupBroadcast is missing')
+      end
     elseif trimmedParam == 'whitelist on' then
       FarmingPartyPlus.Settings:SetWhitelistMode(true)
       d('[Farming Party Plus]: Whitelist mode is on')
@@ -149,9 +142,29 @@ function FarmingPartyPlus:ConsoleCommands()
     end
   end
 
+  SLASH_COMMANDS['/fpphelp'] = function()
+    d('-- Farming Party Plus commands --')
+    d('/fp                   Legacy alias for /fpp')
+    d('/fpp                  Show or hide the highscore window.')
+    d('/fpp prune            Removes members no longer in group.')
+    d('/fpp reset            Resets all loot data.')
+    d('/fpp [start|stop]     Start or stop loot tracking.')
+    d('/fpp [status]         Show loot tracking status.')
+    d('/fpp update           Sync tracked members with current group.')
+    d('/fpp filters          Open the node whitelist window.')
+    d('/fpp sync             Show optional sync receiver status.')
+    d('/fpp whitelist on     Count only selected whitelist items.')
+    d('/fpp whitelist off    Use the original quality-based filters.')
+    d('/fppc                 Put score output into the chat box.')
+  end
+
+  SLASH_COMMANDS['/fpp'] = HandleMainCommand
+  SLASH_COMMANDS['/fp'] = HandleMainCommand
+
   SLASH_COMMANDS['/fppc'] = function()
     self.Modules.MemberList:PrintScoresToChat()
   end
+  SLASH_COMMANDS['/fpc'] = SLASH_COMMANDS['/fppc']
 
   SLASH_COMMANDS['/fppm'] = function()
     FarmingPartyPlusMemberItems:ToggleWindow()

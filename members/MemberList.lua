@@ -142,7 +142,11 @@ function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
   rowControl.data = rowData
   local data = rowData.rawData
   GetControl(rowControl, 'FarmerId'):SetText(data.id)
-  GetControl(rowControl, 'Farmer'):SetText(data.displayName)
+  local farmerButton = GetControl(rowControl, 'FarmerButton')
+  farmerButton:SetText(data.displayName)
+  farmerButton:SetNormalFontColor(0.36, 0.80, 1.00, 1)
+  farmerButton:SetMouseOverFontColor(0.60, 0.90, 1.00, 1)
+  farmerButton:SetPressedFontColor(0.25, 0.65, 0.92, 1)
   GetControl(rowControl, 'BestItemName'):SetText(data.bestItem.itemLink)
   GetControl(rowControl, 'TotalValue'):SetText(FarmingPartyPlus.FormatNumber(data.totalValue) .. 'g')
 end
@@ -198,8 +202,18 @@ function FarmingPartyPlusMemberList:AddAllGroupMembers()
   end
 end
 
-local function BuildScoreString(farmer)
-  return farmer.displayName .. ': ' .. FarmingPartyPlus.FormatNumber(farmer.totalValue) .. 'g.'
+local function FormatUserId(displayName)
+  if displayName == nil or displayName == '' then
+    return '@Unknown'
+  end
+  if zo_plainstrfind(displayName, '@') == 1 then
+    return displayName
+  end
+  return '@' .. displayName
+end
+
+local function BuildScoreString(rank, farmer)
+  return string.format('%d. %s %sg', rank, FormatUserId(farmer.displayName), FarmingPartyPlus.FormatNumber(farmer.totalValue))
 end
 
 function FarmingPartyPlusMemberList:PrintScoresToChat()
@@ -218,8 +232,8 @@ function FarmingPartyPlusMemberList:PrintScoresToChat()
   end)
 
   local farmingScores = { [1] = Settings:ChatPrefix() }
-  for _, farmer in ipairs(array) do
-    farmingScores[#farmingScores + 1] = BuildScoreString(farmer)
+  for index, farmer in ipairs(array) do
+    farmingScores[#farmingScores + 1] = BuildScoreString(index, farmer)
   end
   StartChatInput(table.concat(farmingScores, ' '))
 end
