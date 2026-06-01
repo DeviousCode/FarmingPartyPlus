@@ -1,0 +1,15 @@
+<Bindings>
+  <Layer name="SI_KEYBINDINGS_CATEGORY_GENERAL">
+    <Category name="Farming Party Plus">
+      <Action name="TOGGLE_SCOREBOARD_PLUS">
+        <Down>FarmingPartyPlusMemberList:ToggleMembersWindow()</Down>
+      </Action>
+      <Action name="TOGGLE_ITEM_BREAKDOWN_PLUS">
+        <Down>FarmingPartyPlusMemberItems:ToggleWindow()</Down>
+      </Action>
+      <Action name="TOGGLE_FILTERS_PLUS">
+        <Down>FarmingPartyPlus.Modules.FilterWindow:ToggleWindow()</Down>
+      </Action>
+    </Category>
+  </Layer>
+</Bindings>

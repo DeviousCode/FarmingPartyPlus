@@ -1,0 +1,76 @@
+<GuiXml>
+  <Controls>
+    <TopLevelControl name="FarmingPartyPlusItemFilterWindow" inherits="FarmingPartyPlusListWindow" hidden="true" resizeHandleSize="8">
+      <DimensionConstraints minX="700" minY="500" />
+      <Controls>
+        <Label name="$(parent)Title" font="ZoFontHeader2" height="28" inheritAlpha="true" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" verticalAlignment="TOP" horizontalAlignment="CENTER" text="Farming Party Plus Item Whitelist">
+          <Anchor point="TOP" relativeTo="$(parent)" relativePoint="TOP" offsetX="-10" offsetY="8" />
+        </Label>
+        <Label name="$(parent)ModeLabel" font="ZoFontGame" text="Mode:" verticalAlignment="CENTER">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="18" offsetY="48" />
+        </Label>
+        <Label name="$(parent)ModeValue" font="ZoFontGame" text="Whitelist On" verticalAlignment="CENTER">
+          <Anchor point="LEFT" relativeTo="$(parent)ModeLabel" relativePoint="RIGHT" offsetX="8" offsetY="0" />
+        </Label>
+        <Button name="$(parent)ModeButton" font="ZoFontGame" text="Toggle Mode">
+          <Anchor point="TOPRIGHT" relativeTo="$(parent)" relativePoint="TOPRIGHT" offsetX="-120" offsetY="42" />
+          <Dimensions x="110" y="24" />
+          <OnClicked>FarmingPartyPlus.Modules.FilterWindow:ToggleWhitelistMode()</OnClicked>
+        </Button>
+        <Button name="$(parent)EnableAllButton" font="ZoFontGame" text="Enable All">
+          <Anchor point="TOPRIGHT" relativeTo="$(parent)ModeButton" relativePoint="TOPLEFT" offsetX="-10" offsetY="0" />
+          <Dimensions x="110" y="24" />
+          <OnClicked>FarmingPartyPlus.Modules.FilterWindow:SetAll(true)</OnClicked>
+        </Button>
+        <Button name="$(parent)DisableAllButton" font="ZoFontGame" text="Disable All">
+          <Anchor point="TOPRIGHT" relativeTo="$(parent)EnableAllButton" relativePoint="TOPLEFT" offsetX="-10" offsetY="0" />
+          <Dimensions x="110" y="24" />
+          <OnClicked>FarmingPartyPlus.Modules.FilterWindow:SetAll(false)</OnClicked>
+        </Button>
+        <Label name="$(parent)Hint" font="ZoFontGameSmall" width="650" wrapMode="ELLIPSIS" text="Whitelist mode counts only the enabled items below. Low tiers start off disabled so node farming stays clean by default.">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="18" offsetY="78" />
+        </Label>
+        <Control name="$(parent)List" inherits="ZO_ScrollList">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="12" offsetY="110"/>
+          <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)" relativePoint="BOTTOMRIGHT" offsetX="-12" offsetY="-12"/>
+        </Control>
+      </Controls>
+    </TopLevelControl>
+
+    <Control name="FarmingPartyPlusFilterHeaderRow" virtual="true">
+      <Dimensions x="710" y="28" />
+      <Controls>
+        <Label name="$(parent)Title" font="ZoFontHeader3" verticalAlignment="CENTER">
+          <Anchor point="LEFT" relativeTo="$(parent)" relativePoint="LEFT" offsetX="8" offsetY="0" />
+          <Dimensions x="260" y="28" />
+        </Label>
+        <Button name="$(parent)Enable" font="ZoFontGameSmall" text="All On">
+          <Anchor point="RIGHT" relativeTo="$(parent)" relativePoint="RIGHT" offsetX="-88" offsetY="0" />
+          <Dimensions x="70" y="22" />
+        </Button>
+        <Button name="$(parent)Disable" font="ZoFontGameSmall" text="All Off">
+          <Anchor point="RIGHT" relativeTo="$(parent)" relativePoint="RIGHT" offsetX="-8" offsetY="0" />
+          <Dimensions x="70" y="22" />
+        </Button>
+      </Controls>
+    </Control>
+
+    <Control name="FarmingPartyPlusFilterItemRow" virtual="true">
+      <Dimensions x="710" y="30" />
+      <Controls>
+        <Button name="$(parent)Item1" font="ZoFontGameSmall">
+          <Anchor point="LEFT" relativeTo="$(parent)" relativePoint="LEFT" offsetX="8" offsetY="0" />
+          <Dimensions x="220" y="24" />
+        </Button>
+        <Button name="$(parent)Item2" font="ZoFontGameSmall">
+          <Anchor point="LEFT" relativeTo="$(parent)Item1" relativePoint="RIGHT" offsetX="10" offsetY="0" />
+          <Dimensions x="220" y="24" />
+        </Button>
+        <Button name="$(parent)Item3" font="ZoFontGameSmall">
+          <Anchor point="LEFT" relativeTo="$(parent)Item2" relativePoint="RIGHT" offsetX="10" offsetY="0" />
+          <Dimensions x="220" y="24" />
+        </Button>
+      </Controls>
+    </Control>
+  </Controls>
+</GuiXml>

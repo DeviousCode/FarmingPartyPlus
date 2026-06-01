@@ -1,0 +1,83 @@
+<GuiXml>
+  <Controls>
+    <TopLevelControl name="FarmingPartyPlusMembersWindow" inherits="FarmingPartyPlusListWindow">
+      <DimensionConstraints minX="550" minY="150" />
+      <Controls>
+        <Label name="$(parent)Title" font="ZoFontHeader3" height="25" inheritAlpha="true" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" verticalAlignment="TOP" horizontalAlignment="CENTER" text="Farming Party Plus Members">
+          <Anchor point="TOP" relativeTo="$(parent)" relativePoint="TOP" offsetX="-10" offsetY="5" />
+        </Label>
+        <Button name="$(parent)FiltersButton" font="ZoFontGame" text="Filters">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="16" offsetY="12" />
+          <Dimensions x="90" y="26" />
+          <OnClicked>FarmingPartyPlus.Modules.FilterWindow:ToggleWindow()</OnClicked>
+        </Button>
+        <Control name="$(parent)Headers">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="10" offsetY="51" />
+          <Dimensions y="32" />
+          <Controls>
+            <Button name="$(parent)Farmer" mouseEnabled="true">
+              <Anchor point="TOPLEFT" offsetX="15"/>
+              <Dimensions x="200" y="32" />
+              <Controls>
+                <Label name="$(parent)Name" font="ZoFontGame" color="3689EF" modifyTextType="NONE" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="Farmer">
+                  <Anchor point="TOPLEFT" relativePoint="TOPLEFT"/>
+                  <Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT"/>
+                </Label>
+              </Controls>
+            </Button>
+            <Control name="$(parent)BestItemName" mouseEnabled="true">
+              <Anchor point="TOPLEFT" relativeTo="$(parent)Farmer" relativePoint="TOPRIGHT" offsetX="60" />
+              <Anchor point="BOTTOMLEFT" relativeTo="$(parent)Farmer" relativePoint="BOTTOMRIGHT" offsetX="60" />
+              <Dimensions x="200" y="32" />
+              <Controls>
+                <Label name="$(parent)Name" font="ZoFontGame" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" modifyTextType="NONE" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="Best Item">
+                  <Anchor point="TOPLEFT" relativePoint="TOPLEFT"/>
+                  <Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT"/>
+                </Label>
+              </Controls>
+            </Control>
+            <Control name="$(parent)TotalValue">
+              <Anchor point="TOPLEFT" relativeTo="$(parent)BestItemName" relativePoint="TOPRIGHT" offsetX="60" />
+              <Dimensions x="100" y="32" />
+              <Controls>
+                <Label name="$(parent)TotalValue" font="ZoFontGame" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" modifyTextType="NONE" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="Total Value">
+                  <Anchor point="TOPLEFT" relativePoint="TOPLEFT"/>
+                  <Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT"/>
+                </Label>
+              </Controls>
+            </Control>
+          </Controls>
+        </Control>
+        <Control name="$(parent)List" inherits="ZO_ScrollList">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)Headers" relativePoint="BOTTOMLEFT" offsetX="0" offsetY="5"/>
+          <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)" relativePoint="BOTTOMRIGHT" offsetX="0" offsetY="-5"/>
+        </Control>
+      </Controls>
+    </TopLevelControl>
+
+    <Control name="FarmingPartyPlusMemberDataRow" inherits="FarmingPartyPlusListRow" virtual="true">
+      <Controls>
+        <Label name="$(parent)FarmerId" hidden="true" />
+        <Label name="$(parent)Farmer" inheritAlpha="true" verticalAlignment="CENTER" horizontalAlignment="LEFT" wrapMode="ELLIPSIS" font="EsoUI/Common/Fonts/ProseAntiquePSMT.otf|15">
+          <Dimensions x="200" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="15" offsetY="0"/>
+        </Label>
+        <Control name="$(parent)BestItemName" inherits="FarmingPartyPlusItemColumn" inheritAlpha="true" mouseEnabled="true">
+          <Dimensions x="200" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)Farmer" relativePoint="TOPRIGHT" offsetX="60" offsetY="0"/>
+          <Anchor point="BOTTOMLEFT" relativeTo="$(parent)Farmer" relativePoint="BOTTOMRIGHT" offsetX="60" offsetY="0"/>
+        </Control>
+        <Label name="$(parent)TotalValue" inheritAlpha="true" verticalAlignment="CENTER" horizontalAlignment="RIGHT" wrapMode="ELLIPSIS" font="EsoUI/Common/Fonts/ProseAntiquePSMT.otf|15">
+          <Dimensions x="100" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)BestItemName" relativePoint="TOPRIGHT" offsetX="40" offsetY="0"/>
+          <Anchor point="BOTTOMLEFT" relativeTo="$(parent)BestItemName" relativePoint="BOTTOMRIGHT" offsetX="40" offsetY="0"/>
+        </Label>
+        <Button name="$(parent)InspectButton" font="ZoFontGameSmall" text="Items">
+          <Anchor point="LEFT" relativeTo="$(parent)TotalValue" relativePoint="RIGHT" offsetX="20" offsetY="0" />
+          <Dimensions x="55" y="22" />
+          <OnClicked>FarmingPartyPlusMemberItems:SetAndToggle(self:GetParent():GetNamedChild("FarmerId"):GetText())</OnClicked>
+        </Button>
+      </Controls>
+    </Control>
+  </Controls>
+</GuiXml>

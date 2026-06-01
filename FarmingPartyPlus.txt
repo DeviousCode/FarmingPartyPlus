@@ -1,0 +1,28 @@
+;This Add-on is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its affiliates.
+;The Elder Scrolls® and related logos are registered trademarks or trademarks of ZeniMax Media Inc.
+;in the United States and/or other countries. All rights reserved.
+
+## Title: Farming Party Plus
+## Description: Tracks group loot with a node-farming whitelist and configurable item filters.
+## Author: Aldanga, updated by Codex
+## Version: 2.15.0-plus
+## APIVersion: 101044
+## DependsOn: LibAddonMenu-2.0 LibAsync LibPrice
+## SavedVariables: FarmingPartyPlusMemberList_db FarmingPartyPlusSettings_db
+
+filters/ItemCatalog.lua
+FarmingPartyPlusTemplates.xml
+FarmingPartyPlus.xml
+filters/FilterWindow.xml
+members/MembersWindow.xml
+members/MemberItems.xml
+members/Members.lua
+members/MemberItem.lua
+members/MemberList.lua
+members/MemberItems.lua
+logger/Logger.lua
+filters/FilterWindow.lua
+loot/Loot.lua
+Startup.lua
+Settings.lua
+Bindings.xml
