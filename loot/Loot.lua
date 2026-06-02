@@ -41,6 +41,10 @@ local function IsTrackedGuttingOutputName(itemName)
   return itemName == 'fish' or itemName == 'perfect roe'
 end
 
+local function IsRecipeItemType(itemType)
+  return itemType == ITEMTYPE_RECIPE
+end
+
 function FarmingPartyPlusLoot:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
@@ -189,12 +193,16 @@ function FarmingPartyPlusLoot:ShouldTrackByLegacyRules(itemLink)
 end
 
 function FarmingPartyPlusLoot:ShouldTrackByWhitelist(itemLink)
+  local itemType = GetItemLinkItemType(itemLink)
+  if IsRecipeItemType(itemType) and Settings:IsWhitelistRuleEnabled('__recipes_any__') then
+    return GetItemPrice(itemLink) >= Settings:MinimumRecipeValue()
+  end
+
   local itemKey = NormalizeItemName(itemLink)
   if Settings:IsWhitelistedItem(itemKey) then
     return true
   end
 
-  local itemType = GetItemLinkItemType(itemLink)
   if itemType == ITEMTYPE_FISH and Settings:IsWhitelistRuleEnabled('__fish_any__') then
     return true
   end
@@ -226,6 +234,9 @@ function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
   end
 
   if Settings:UseWhitelistMode() then
+    if IsRecipeItemType(data.itemType) and Settings:IsWhitelistRuleEnabled('__recipes_any__') then
+      return (tonumber(data.itemValue) or 0) >= Settings:MinimumRecipeValue()
+    end
     if data.itemType == ITEMTYPE_FISH and Settings:IsWhitelistRuleEnabled('__fish_any__') then
       return true
     end

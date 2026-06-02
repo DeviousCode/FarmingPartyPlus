@@ -1,5 +1,8 @@
 local ADDON_NAME = 'Farming Party Plus'
-local ADDON_VERSION = '3.0.2'
+local ADDON_VERSION = '3.0.3'
+local DEFAULT_MINIMUM_RECIPE_VALUE = 3000
+local MINIMUM_RECIPE_VALUE = 100
+local MAXIMUM_RECIPE_VALUE = 50000
 
 local LAM2 = LibAddonMenu2
 
@@ -31,8 +34,21 @@ local function BuildWhitelistDefaults()
   end
   return {
     enabled = true,
-    items = itemStates
+    items = itemStates,
+    minimumRecipeValue = DEFAULT_MINIMUM_RECIPE_VALUE
   }
+end
+
+local function CopyTable(source)
+  if type(source) ~= 'table' then
+    return source
+  end
+
+  local copy = {}
+  for key, value in pairs(source) do
+    copy[key] = CopyTable(value)
+  end
+  return copy
 end
 
 FarmingPartyPlusSettings.TRACKING_STATUS = {
@@ -62,6 +78,7 @@ function FarmingPartyPlusSettings:Initialize()
     displayLootValue = true,
     manualHighscoreReset = true,
     lootWhitelist = BuildWhitelistDefaults(),
+    whitelistProfiles = {},
     window = {
       transparency = 100,
       backgroundTransparency = 100,
@@ -472,6 +489,10 @@ function FarmingPartyPlusSettings:NormalizeWhitelistSettings()
   if whitelist.items == nil then
     whitelist.items = {}
   end
+  if whitelist.minimumRecipeValue == nil then
+    whitelist.minimumRecipeValue = DEFAULT_MINIMUM_RECIPE_VALUE
+  end
+  whitelist.minimumRecipeValue = zo_clamp(tonumber(whitelist.minimumRecipeValue) or DEFAULT_MINIMUM_RECIPE_VALUE, MINIMUM_RECIPE_VALUE, MAXIMUM_RECIPE_VALUE)
   for _, item in ipairs(FarmingPartyPlusItemCatalog.items) do
     if whitelist.items[item.key] == nil then
       whitelist.items[item.key] = item.defaultEnabled
@@ -481,6 +502,13 @@ end
 
 function FarmingPartyPlusSettings:GetSettings()
   return self.settings
+end
+
+function FarmingPartyPlusSettings:GetWhitelistProfiles()
+  if self.settings.whitelistProfiles == nil then
+    self.settings.whitelistProfiles = {}
+  end
+  return self.settings.whitelistProfiles
 end
 
 function FarmingPartyPlusSettings:MinimumLootQuality()
@@ -598,6 +626,66 @@ end
 function FarmingPartyPlusSettings:SetWhitelistedItem(itemKey, value)
   self:NormalizeWhitelistSettings()
   self.settings.lootWhitelist.items[itemKey] = value
+end
+
+function FarmingPartyPlusSettings:MinimumRecipeValue()
+  self:NormalizeWhitelistSettings()
+  return self.settings.lootWhitelist.minimumRecipeValue
+end
+
+function FarmingPartyPlusSettings:SetMinimumRecipeValue(value)
+  self:NormalizeWhitelistSettings()
+  self.settings.lootWhitelist.minimumRecipeValue = zo_clamp(tonumber(value) or DEFAULT_MINIMUM_RECIPE_VALUE, MINIMUM_RECIPE_VALUE, MAXIMUM_RECIPE_VALUE)
+end
+
+function FarmingPartyPlusSettings:AdjustMinimumRecipeValue(delta)
+  self:SetMinimumRecipeValue(self:MinimumRecipeValue() + (tonumber(delta) or 0))
+end
+
+function FarmingPartyPlusSettings:GetWhitelistProfileNames()
+  local names = {}
+  for profileName in pairs(self:GetWhitelistProfiles()) do
+    names[#names + 1] = profileName
+  end
+  table.sort(names, function(left, right)
+    return zo_strlower(left) < zo_strlower(right)
+  end)
+  return names
+end
+
+function FarmingPartyPlusSettings:SaveWhitelistProfile(profileName)
+  if profileName == nil or profileName == '' then
+    return false
+  end
+
+  self:NormalizeWhitelistSettings()
+  self:GetWhitelistProfiles()[profileName] = CopyTable(self.settings.lootWhitelist)
+  return true
+end
+
+function FarmingPartyPlusSettings:DeleteWhitelistProfile(profileName)
+  if profileName == nil or profileName == '' then
+    return false
+  end
+
+  local profiles = self:GetWhitelistProfiles()
+  if profiles[profileName] == nil then
+    return false
+  end
+
+  profiles[profileName] = nil
+  return true
+end
+
+function FarmingPartyPlusSettings:LoadWhitelistProfile(profileName)
+  local profile = self:GetWhitelistProfiles()[profileName]
+  if profile == nil then
+    return false
+  end
+
+  self.settings.lootWhitelist = CopyTable(profile)
+  self:NormalizeWhitelistSettings()
+  return true
 end
 
 function FarmingPartyPlusSettings:ToggleAllWhitelistItems(value)

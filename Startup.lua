@@ -6,7 +6,8 @@ FarmingPartyPlus.DataTypes = {
   MEMBER = 1,
   MEMBER_ITEM = 2,
   FILTER_HEADER = 3,
-  FILTER_ROW = 4
+  FILTER_ROW = 4,
+  FILTER_RECIPE_VALUE = 5
 }
 FarmingPartyPlus.SaveData = {}
 FarmingPartyPlus.Settings = {}

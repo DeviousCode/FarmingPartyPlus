@@ -5,8 +5,8 @@
 ## Title: Farming Party Plus
 ## Description: Tracks group loot with a node-farming whitelist and configurable item filters.
 ## Author: DeviousCode
-## Version: 3.0.2
-## AddOnVersion: 30002
+## Version: 3.0.3
+## AddOnVersion: 30003
 ## APIVersion: 101048 101049
 ## DependsOn: LibAddonMenu-2.0 LibAsync LibPrice
 ## SavedVariables: FarmingPartyPlusMemberList_db FarmingPartyPlusSettings_db

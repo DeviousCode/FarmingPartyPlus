@@ -7,6 +7,7 @@ FarmingPartyPlusItemCatalog = {
     alchemy = "Alchemy",
     enchanting = "Enchanting",
     provisioning = "Provisioning",
+    recipes = "Recipes",
     baitCommon = "Common Bait",
     baitRare = "Rare Bait",
     fishing = "Fishing",
@@ -146,6 +147,8 @@ FarmingPartyPlusItemCatalog = {
     { key = "saltrice", name = "Saltrice", category = "provisioning", defaultEnabled = false },
     { key = "honey", name = "Honey", category = "provisioning", defaultEnabled = false },
     { key = "flour", name = "Flour", category = "provisioning", defaultEnabled = false },
+
+    { key = "__recipes_any__", name = "All Recipes (uses recipe value floor below)", category = "recipes", defaultEnabled = false },
 
     { key = "worms", name = "Worms", category = "baitCommon", defaultEnabled = false },
     { key = "guts", name = "Guts", category = "baitCommon", defaultEnabled = false },

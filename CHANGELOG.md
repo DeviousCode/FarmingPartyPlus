@@ -2,6 +2,24 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [3.0.3] - 2026-06-01
+### Added
+- A `Recipes` whitelist category with a shared recipe tracking rule for valuable node recipes.
+- A recipe minimum-value threshold, defaulting to `3000g` and bounded from `100g` to `50000g`.
+- Account-wide whitelist profile save/load/delete support with per-profile names.
+- A whitelist profile load confirmation dialog that reloads the UI on acceptance.
+
+### Changed
+- Reworked the top of the whitelist window to separate profile naming/saving from saved profile selection.
+- Added live validation for whitelist profile names so they accept letters only, with no spaces.
+- Refined the whitelist window layout and row widths to better fit longer rule labels.
+
+### Fixed
+- Fixed the recipe threshold UI by replacing the broken native slider behavior with a custom bar control.
+- Fixed recipe slider endpoint behavior so clicking the min/max labels snaps to exact `100g` and `50000g`.
+- Fixed recipe slider row overlap and improved the visible slider track, fill, and thumb state.
+- Fixed the profile name field so it takes focus and accepts typed input correctly.
+
 ## [3.0.2] - 2026-06-01
 ### Added
 - Helper-presence indicators in the members window, driven by observed sync traffic from `FarmingPartyPlusSync`.
