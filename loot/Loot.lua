@@ -23,6 +23,23 @@ local MemberList
 local Logger
 local Settings
 local Sync
+local trackedLocalFishSlots = {}
+
+local function BuildBagSlotKey(bagId, slotIndex)
+  return string.format('%d:%d', bagId, slotIndex)
+end
+
+local function IsBackpackSlot(bagId)
+  return bagId == BAG_BACKPACK
+end
+
+local function IsGuttableFishItem(itemLink)
+  return GetItemLinkItemType(itemLink) == ITEMTYPE_FISH and GetItemLinkQuality(itemLink) <= ITEM_QUALITY_NORMAL
+end
+
+local function IsTrackedGuttingOutputName(itemName)
+  return itemName == 'fish' or itemName == 'perfect roe'
+end
 
 function FarmingPartyPlusLoot:New()
   local obj = ZO_Object.New(self)
@@ -45,6 +62,10 @@ end
 function FarmingPartyPlusLoot:Finalize()
 end
 
+function FarmingPartyPlusLoot:ClearSessionState()
+  ZO_ClearTable(trackedLocalFishSlots)
+end
+
 function FarmingPartyPlusLoot:AddEventHandlers()
   EVENT_MANAGER:RegisterForEvent(
     ADDON_NAME,
@@ -53,11 +74,19 @@ function FarmingPartyPlusLoot:AddEventHandlers()
       self:OnItemLooted(...)
     end
   )
+  EVENT_MANAGER:RegisterForEvent(
+    ADDON_NAME,
+    EVENT_INVENTORY_SINGLE_SLOT_UPDATE,
+    function(...)
+      self:OnInventorySlotUpdated(...)
+    end
+  )
   Settings:ToggleStatusValue(FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED)
 end
 
 function FarmingPartyPlusLoot:RemoveEventHandlers()
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_LOOT_RECEIVED)
+  EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE)
   Settings:ToggleStatusValue(FarmingPartyPlus.Settings.TRACKING_STATUS.DISABLED)
 end
 
@@ -206,6 +235,51 @@ function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
   return (data.quality or 0) >= (tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH)
 end
 
+function FarmingPartyPlusLoot:RememberLocalFishSlot(bagId, slotIndex)
+  if not IsBackpackSlot(bagId) then
+    return
+  end
+
+  local itemLink = GetItemLink(bagId, slotIndex)
+  if itemLink == nil or itemLink == '' or not IsGuttableFishItem(itemLink) then
+    trackedLocalFishSlots[BuildBagSlotKey(bagId, slotIndex)] = nil
+    return
+  end
+
+  trackedLocalFishSlots[BuildBagSlotKey(bagId, slotIndex)] = {
+    bagId = bagId,
+    slotIndex = slotIndex,
+    itemLink = itemLink,
+    itemValue = GetItemPrice(itemLink),
+    stackCount = GetSlotStackSize(bagId, slotIndex),
+    claimedCount = trackedLocalFishSlots[BuildBagSlotKey(bagId, slotIndex)] ~= nil and (trackedLocalFishSlots[BuildBagSlotKey(bagId, slotIndex)].claimedCount or 0) or 0
+  }
+end
+
+function FarmingPartyPlusLoot:ClaimLocalFishSlotForSession(normalizedItemName, caughtQuantity)
+  zo_callLater(function()
+    local playerName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
+    local claimedCatchQuantity = tonumber(caughtQuantity) or 0
+    for slotIndex = 0, GetBagSize(BAG_BACKPACK) do
+      local slotItemLink = GetItemLink(BAG_BACKPACK, slotIndex)
+      if slotItemLink ~= nil and slotItemLink ~= '' and NormalizeItemName(slotItemLink) == normalizedItemName and IsGuttableFishItem(slotItemLink) then
+        local slotKey = BuildBagSlotKey(BAG_BACKPACK, slotIndex)
+        local currentStackCount = GetSlotStackSize(BAG_BACKPACK, slotIndex)
+        local trackedSlot = trackedLocalFishSlots[slotKey]
+        local previouslyClaimedCount = trackedSlot ~= nil and (trackedSlot.claimedCount or 0) or 0
+        local claimDelta = currentStackCount - previouslyClaimedCount - claimedCatchQuantity
+
+        self:RememberLocalFishSlot(BAG_BACKPACK, slotIndex)
+        if claimDelta > 0 and Members:HasMember(playerName) then
+          local itemValue = GetItemPrice(slotItemLink)
+          self:AddNewLootedItem(playerName, slotItemLink, itemValue, claimDelta)
+        end
+        trackedLocalFishSlots[slotKey].claimedCount = currentStackCount
+      end
+    end
+  end, 0)
+end
+
 function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, itemSound, lootType, lootedByPlayer)
   if not lootedByPlayer and not Settings:TrackGroupLoot() then
     return
@@ -213,6 +287,12 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
   if lootedByPlayer and not Settings:TrackSelfLoot() then
     return
   end
+
+  local normalizedItemName = NormalizeItemName(itemLink)
+  if lootedByPlayer and IsTrackedGuttingOutputName(normalizedItemName) then
+    return
+  end
+
   if not self:ShouldTrackItem(itemLink, lootType) then
     return
   end
@@ -230,6 +310,10 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
   end
   self:AddNewLootedItem(memberKey, itemLink, itemValue, quantity)
   Logger:LogLootItem(looterMember.displayName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+
+  if lootedByPlayer and IsGuttableFishItem(itemLink) then
+    self:ClaimLocalFishSlotForSession(normalizedItemName, quantity)
+  end
 end
 
 function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
@@ -246,11 +330,21 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
   end
 
   local itemName = data.itemName
+  local itemLink = data.itemLink
   local itemValue = data.itemValue or 0
-  local quantity = data.quantity or 1
+  local quantity = tonumber(data.quantity) or 1
+  local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
 
-  self:AddNewLootedItem(memberKey, itemName, itemValue, quantity)
-  Logger:LogLootItem(looterMember.displayName, false, itemName, quantity, itemValue * quantity, data.lootType or 0)
+  if quantity == 0 then
+    return
+  end
+
+  if quantity > 0 then
+    self:AddNewLootedItem(memberKey, trackedItem, itemValue, quantity)
+    Logger:LogLootItem(looterMember.displayName, false, trackedItem, quantity, itemValue * quantity, data.lootType or 0)
+  else
+    self:AdjustLootedItem(memberKey, trackedItem, itemValue, quantity)
+  end
 end
 
 function FarmingPartyPlusLoot:AddNewLootedItem(memberName, itemLink, itemValue, count)
@@ -261,4 +355,54 @@ function FarmingPartyPlusLoot:AddNewLootedItem(memberName, itemLink, itemValue, 
   itemDetails = FarmingPartyPlusMemberItem:UpdateItemCount(itemDetails, itemValue, count)
   Members:SetItemForMember(memberName, itemLink, itemDetails)
   Members:UpdateTotalValueAndSetBestItem(memberName, itemDetails, itemValue * count)
+end
+
+function FarmingPartyPlusLoot:AdjustLootedItem(memberName, itemLink, itemValue, count)
+  local itemDetails = Members:GetItemForMember(memberName, itemLink)
+  if itemDetails == nil then
+    return
+  end
+
+  itemDetails = FarmingPartyPlusMemberItem:UpdateItemCount(itemDetails, itemValue, count)
+  if itemDetails.count <= 0 then
+    Members:DeleteItemForMember(memberName, itemLink)
+  else
+    Members:SetItemForMember(memberName, itemLink, itemDetails)
+  end
+  Members:RebuildMemberTotals(memberName)
+end
+
+function FarmingPartyPlusLoot:OnInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem, itemSoundCategory, inventoryUpdateReason, stackCountChange)
+  if not IsBackpackSlot(bagId) or not Settings:TrackSelfLoot() then
+    return
+  end
+
+  local slotKey = BuildBagSlotKey(bagId, slotIndex)
+  local trackedSlot = trackedLocalFishSlots[slotKey]
+  local countDelta = tonumber(stackCountChange) or 0
+  local playerName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
+
+  if trackedSlot ~= nil and countDelta < 0 and Members:HasMember(playerName) then
+    local quantityRemoved = math.min(math.abs(countDelta), trackedSlot.claimedCount or math.abs(countDelta))
+    self:AdjustLootedItem(playerName, trackedSlot.itemLink, trackedSlot.itemValue, -quantityRemoved)
+    trackedSlot.stackCount = math.max((trackedSlot.stackCount or 0) - quantityRemoved, 0)
+    trackedSlot.claimedCount = math.max((trackedSlot.claimedCount or 0) - quantityRemoved, 0)
+    if trackedSlot.claimedCount == 0 then
+      trackedLocalFishSlots[slotKey] = nil
+    end
+  end
+
+  if countDelta > 0 and Members:HasMember(playerName) then
+    local itemLink = GetItemLink(bagId, slotIndex)
+    if itemLink ~= nil and itemLink ~= '' then
+      local normalizedItemName = NormalizeItemName(itemLink)
+      if IsTrackedGuttingOutputName(normalizedItemName) and self:ShouldTrackItem(itemLink, LOOT_TYPE_ITEM) then
+        local itemValue = GetItemPrice(itemLink)
+        self:AddNewLootedItem(playerName, itemLink, itemValue, countDelta)
+        Logger:LogLootItem(GetDisplayName('player'), true, itemLink, countDelta, itemValue * countDelta, LOOT_TYPE_ITEM)
+      end
+    end
+  end
+
+  self:RememberLocalFishSlot(bagId, slotIndex)
 end

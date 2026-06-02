@@ -2,6 +2,23 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [3.0.2] - 2026-06-01
+### Added
+- Helper-presence indicators in the members window, driven by observed sync traffic from `FarmingPartyPlusSync`.
+- A dedicated loot-history toggle keybind plus `/fpp loot`, `/fpp log`, and `/fpploot` commands.
+- A delayed ready message after `/reloadui` so the addon reports when tracking is actually ready.
+
+### Changed
+- Tightened the members window layout by reducing the spacing between columns and removing the visible `Items` label.
+- Updated the loot history window toggle path so keybind and settings changes use the same visibility state.
+- Extended the whitelist catalog to include `Fish` by default for fishing-session gutting output.
+
+### Fixed
+- Added local backpack fish-slot tracking so host-side gutting can subtract consumed fish and add `Fish` or `Perfect Roe` correctly.
+- Added reset handling for local loot and sync session caches so `/fpp reset` clears active gutting/sync state.
+- Fixed loot history window layout drift after show/hide by reapplying saved dimensions and anchoring the text buffer correctly.
+- Reduced sync protocol ID size and enabled signed synced quantities so helper deltas can add and subtract tracked items safely.
+
 ## [3.0.1] - 2026-06-01
 ### Fixed
 - Removed the circular optional dependency between `FarmingPartyPlus` and `FarmingPartyPlusSync`.

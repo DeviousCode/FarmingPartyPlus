@@ -142,6 +142,14 @@ function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
   rowControl.data = rowData
   local data = rowData.rawData
   GetControl(rowControl, 'FarmerId'):SetText(data.id)
+  local helperIcon = GetControl(rowControl, 'HelperStatusIcon')
+  if data.helperActive then
+    helperIcon:SetColor(0.45, 0.95, 0.55, 1)
+    helperIcon:SetAlpha(1)
+  else
+    helperIcon:SetColor(0.70, 0.70, 0.70, 1)
+    helperIcon:SetAlpha(0.65)
+  end
   local farmerButton = GetControl(rowControl, 'FarmerButton')
   farmerButton:SetText(data.displayName)
   farmerButton:SetNormalFontColor(0.36, 0.80, 1.00, 1)
@@ -198,6 +206,27 @@ function FarmingPartyPlusMemberList:AddAllGroupMembers()
   for name, displayName in pairs(self:GetAllGroupMembers()) do
     if not members:HasMember(name) then
       members:SetMember(name, members:NewMember(name, displayName))
+    end
+  end
+end
+
+function FarmingPartyPlusMemberList:MarkHelperActive(characterName, displayName)
+  local normalizedCharacterName = zo_strformat(SI_UNIT_NAME, characterName or '')
+  if normalizedCharacterName ~= '' and members:HasMember(normalizedCharacterName) then
+    members:SetHelperActive(normalizedCharacterName, true)
+    return
+  end
+
+  self:AddAllGroupMembers()
+  if normalizedCharacterName ~= '' and members:HasMember(normalizedCharacterName) then
+    members:SetHelperActive(normalizedCharacterName, true)
+    return
+  end
+
+  for memberKey, memberData in pairs(members:GetMembers()) do
+    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
+      members:SetHelperActive(memberKey, true)
+      return
     end
   end
 end

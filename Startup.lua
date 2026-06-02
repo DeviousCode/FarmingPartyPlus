@@ -14,6 +14,7 @@ FarmingPartyPlus.Settings = {}
 local DIGIT_GROUP_REPLACER = ','
 local DIGIT_GROUP_DECIMAL_REPLACER = '.'
 local DIGIT_GROUP_REPLACER_THRESHOLD = zo_pow(10, GetDigitGroupingSize())
+local READY_MESSAGE_DELAY_MS = 1500
 
 function FPPlus_LocalizeDecimalNumber(amount)
   if amount == 0 then
@@ -40,6 +41,13 @@ local function OnPlayerDeactivated()
   FarmingPartyPlus:Finalize()
 end
 
+local function GetTrackingStatusText()
+  if FarmingPartyPlus.Settings ~= nil and FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
+    return 'tracking on'
+  end
+  return 'tracking off'
+end
+
 function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
   if addonName ~= ADDON_NAME then
     return
@@ -48,13 +56,16 @@ function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_SCOREBOARD_PLUS', 'Toggle Farming Party Plus Scoreboard')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_ITEM_BREAKDOWN_PLUS', 'Toggle Farming Party Plus Item Breakdown')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_FILTERS_PLUS', 'Toggle Farming Party Plus Filters')
+  ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_LOOT_HISTORY_PLUS', 'Toggle Farming Party Plus Loot History')
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_DEACTIVATED, OnPlayerDeactivated)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
   FarmingPartyPlus.Settings = FarmingPartyPlusSettings:New()
   self:ConsoleCommands()
   self:Initialize()
-  d('[Farming Party Plus]: Loaded')
+  zo_callLater(function()
+    d(string.format('[Farming Party Plus]: Ready. %s. Use /fpp for the scoreboard or /fpphelp for commands.', GetTrackingStatusText()))
+  end, READY_MESSAGE_DELAY_MS)
 end
 
 function FarmingPartyPlus:Finalize()
@@ -90,6 +101,12 @@ end
 
 function FarmingPartyPlus:Reset()
   self.Modules.MemberList:Reset()
+  if self.Modules.Loot ~= nil and self.Modules.Loot.ClearSessionState ~= nil then
+    self.Modules.Loot:ClearSessionState()
+  end
+  if self.Modules.Sync ~= nil and self.Modules.Sync.ClearSessionState ~= nil then
+    self.Modules.Sync:ClearSessionState()
+  end
   d('[Farming Party Plus]: Tracking data has been reset')
 end
 
@@ -122,6 +139,8 @@ function FarmingPartyPlus:ConsoleCommands()
       self:UpdateMembers()
     elseif trimmedParam == 'filters' then
       self.Modules.FilterWindow:ToggleWindow()
+    elseif trimmedParam == 'loot' or trimmedParam == 'log' then
+      FarmingPartyPlus.Settings:ToggleLootWindow()
     elseif trimmedParam == 'sync' then
       if self.Modules.Sync ~= nil and self.Modules.Sync:IsEnabled() then
         d('[Farming Party Plus]: Optional sync receiver is enabled')
@@ -152,6 +171,7 @@ function FarmingPartyPlus:ConsoleCommands()
     d('/fpp [status]         Show loot tracking status.')
     d('/fpp update           Sync tracked members with current group.')
     d('/fpp filters          Open the node whitelist window.')
+    d('/fpp loot             Show or hide the loot history window.')
     d('/fpp sync             Show optional sync receiver status.')
     d('/fpp whitelist on     Count only selected whitelist items.')
     d('/fpp whitelist off    Use the original quality-based filters.')
@@ -172,6 +192,10 @@ function FarmingPartyPlus:ConsoleCommands()
 
   SLASH_COMMANDS['/fppfilters'] = function()
     self.Modules.FilterWindow:ToggleWindow()
+  end
+
+  SLASH_COMMANDS['/fpploot'] = function()
+    FarmingPartyPlus.Settings:ToggleLootWindow()
   end
 end
 

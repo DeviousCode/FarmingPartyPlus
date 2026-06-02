@@ -21,7 +21,8 @@ function FarmingPartyPlusMembers:GetCleanMembers()
       bestItem = member.bestItem,
       totalValue = member.totalValue,
       items = member.items,
-      displayName = member.displayName
+      displayName = member.displayName,
+      helperActive = member.helperActive
     }
   end
   return cleanMembers
@@ -82,6 +83,11 @@ function FarmingPartyPlusMembers:SetItemForMember(memberKey, itemLink, item)
   member.items[itemLink] = item
 end
 
+function FarmingPartyPlusMembers:DeleteItemForMember(memberKey, itemLink)
+  local member = self:GetMember(memberKey)
+  member.items[itemLink] = nil
+end
+
 function FarmingPartyPlusMembers:GetItemsForMember(key)
   local member = self:GetMember(key)
   return member.items
@@ -92,10 +98,20 @@ function FarmingPartyPlusMembers:NewMember(name, displayName)
     bestItem = { itemLink = '', value = 0 },
     totalValue = 0,
     items = {},
-    displayName = displayName
+    displayName = displayName,
+    helperActive = false
   }
   self:FireCallbacks('OnKeysUpdated')
   return newMember
+end
+
+function FarmingPartyPlusMembers:SetHelperActive(name, isActive)
+  local member = self:GetMember(name)
+  if member == nil or member.helperActive == isActive then
+    return
+  end
+  member.helperActive = isActive
+  self:FireCallbacks('OnKeysUpdated')
 end
 
 function FarmingPartyPlusMembers:UpdateTotalValueAndSetBestItem(name, item, valueToAdd)
@@ -107,5 +123,31 @@ function FarmingPartyPlusMembers:UpdateTotalValueAndSetBestItem(name, item, valu
   end
   member.bestItem = bestItem
   member.totalValue = member.totalValue + valueToAdd
+  self:FireCallbacks('OnKeysUpdated')
+end
+
+function FarmingPartyPlusMembers:RebuildMemberTotals(name)
+  local member = self:GetMember(name)
+  local bestItem = { itemLink = '', value = 0 }
+  local totalValue = 0
+
+  for itemLink, item in pairs(member.items) do
+    if item.count == nil or item.count <= 0 then
+      member.items[itemLink] = nil
+    else
+      totalValue = totalValue + (item.totalValue or 0)
+      if (item.value or 0) > (bestItem.value or 0) then
+        bestItem = {
+          itemLink = item.itemLink,
+          count = item.count,
+          value = item.value,
+          totalValue = item.totalValue
+        }
+      end
+    end
+  end
+
+  member.bestItem = bestItem
+  member.totalValue = totalValue
   self:FireCallbacks('OnKeysUpdated')
 end

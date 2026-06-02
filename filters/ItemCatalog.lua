@@ -138,6 +138,7 @@ FarmingPartyPlusItemCatalog = {
     { key = "indeko", name = "Indeko", category = "enchanting", defaultEnabled = true },
 
     { key = "bervez juice", name = "Bervez Juice", category = "provisioning", defaultEnabled = true },
+    { key = "fish", name = "Fish", category = "provisioning", defaultEnabled = true },
     { key = "frost mirriam", name = "Frost Mirriam", category = "provisioning", defaultEnabled = true },
     { key = "perfect roe", name = "Perfect Roe", category = "provisioning", defaultEnabled = true },
     { key = "jazbay grapes", name = "Jazbay Grapes", category = "provisioning", defaultEnabled = false },

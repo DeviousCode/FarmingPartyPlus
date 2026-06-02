@@ -1,4 +1,4 @@
-local SYNC_PROTOCOL_ID = 6391
+local SYNC_PROTOCOL_ID = 391
 local DUPLICATE_WINDOW_SECONDS = 5
 
 FarmingPartyPlusSyncHost = ZO_Object:Subclass()
@@ -53,7 +53,7 @@ function FarmingPartyPlusSyncHost:Initialize()
   protocol:AddField(lib.CreateStringField('senderCharacterName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('senderDisplayName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('itemName', { maxLength = 128 }))
-  protocol:AddField(lib.CreateNumericField('quantity', { numBits = 16 }))
+  protocol:AddField(lib.CreateNumericField('quantity', { minValue = -1000, maxValue = 1000 }))
   protocol:AddField(lib.CreateNumericField('itemType', { numBits = 32 }))
   protocol:AddField(lib.CreateNumericField('equipType', { numBits = 16 }))
   protocol:AddField(lib.CreateNumericField('quality', { numBits = 8 }))
@@ -72,6 +72,10 @@ function FarmingPartyPlusSyncHost:Initialize()
 end
 
 function FarmingPartyPlusSyncHost:Finalize()
+end
+
+function FarmingPartyPlusSyncHost:ClearSessionState()
+  ZO_ClearTable(observedEvents)
 end
 
 function FarmingPartyPlusSyncHost:IsEnabled()
@@ -111,6 +115,11 @@ function FarmingPartyPlusSyncHost:OnData(unitTag, data)
   end
   if self:IsDuplicate(data) then
     return
+  end
+
+  local memberList = FarmingPartyPlus.Modules.MemberList
+  if memberList ~= nil and memberList.MarkHelperActive ~= nil then
+    memberList:MarkHelperActive(data.senderCharacterName, data.senderDisplayName)
   end
 
   local lootModule = FarmingPartyPlus.Modules.Loot

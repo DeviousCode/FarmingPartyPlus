@@ -1,5 +1,5 @@
 local ADDON_NAME = 'Farming Party Plus'
-local ADDON_VERSION = '3.0.1'
+local ADDON_VERSION = '3.0.2'
 
 local LAM2 = LibAddonMenu2
 
@@ -633,11 +633,12 @@ function FarmingPartyPlusSettings:SetWindowValues()
 
   FarmingPartyPlusWindow:ClearAnchors()
   FarmingPartyPlusWindow:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, left, top)
+  FarmingPartyPlusWindow:SetDimensions(width, height)
   FarmingPartyPlusWindow:GetNamedChild('BG'):SetAlpha(self.settings.logWindow.backgroundTransparency / 100)
   FarmingPartyPlusWindow:SetHidden(not display)
 
   FarmingPartyPlusWindowBuffer:ClearAnchors()
-  FarmingPartyPlusWindowBuffer:SetAnchor(TOP, FarmingPartyPlusWindow, TOP, 0, 0)
+  FarmingPartyPlusWindowBuffer:SetAnchor(TOPLEFT, FarmingPartyPlusWindow, TOPLEFT, 0, 0)
   FarmingPartyPlusWindowBuffer:SetWidth(width)
   FarmingPartyPlusWindowBuffer:SetHeight(height)
 
@@ -683,9 +684,11 @@ end
 
 function FarmingPartyPlusSettings:ToggleOnWindow(value)
   self.settings.displayOnWindow = value
-  if value then
-    self:SetWindowValues()
-  end
+  self:SetWindowValues()
+end
+
+function FarmingPartyPlusSettings:ToggleLootWindow()
+  self:ToggleOnWindow(not self:DisplayOnWindow())
 end
 
 function FarmingPartyPlusSettings:ToggleOwnLoot(value)
