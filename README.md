@@ -14,6 +14,8 @@ It is designed for players who want to run organized farming groups without clut
 - Shows tracked loot in a scoreboard window and item breakdown window
 - Logs loot to chat and the loot window
 - Supports optional helper sync through a separate addon
+- Supports fishing-session gutting flows, including processed fish subtraction and `Fish` / `Perfect Roe` outputs
+- Supports saved whitelist profiles and recipe value filtering
 
 ## Main Features
 
@@ -57,6 +59,35 @@ Each category supports:
 - `All On`
 - `All Off`
 
+### Saved Whitelist Profiles
+
+Whitelist setups can be saved account-wide as reusable profiles.
+
+This is useful if you switch between different group money runs such as:
+
+- fishing events
+- ore routes
+- furnishing mat runs
+- recipe-focused node routes
+
+Profiles can be:
+
+- named
+- saved
+- loaded from any character
+- deleted later if no longer needed
+
+### Recipe Value Filtering
+
+Whitelist mode also includes a `Recipes` rule.
+
+When enabled, recipes are only tracked if they meet the configurable minimum value threshold. This keeps low-value recipes out of money-focused event totals while still allowing valuable recipes from nodes to count.
+
+By default:
+
+- recipe tracking is off
+- the minimum recipe value starts at `3000g`
+
 ### Standard Tracking Mode
 
 If whitelist mode is turned off, the addon falls back to the more traditional tracking model:
@@ -66,6 +97,20 @@ If whitelist mode is turned off, the addon falls back to the more traditional tr
 - motifs on or off
 - self loot on or off
 - group loot on or off
+
+### Fishing And Gutting Sessions
+
+`Farming Party Plus` now supports fishing sessions more directly.
+
+It can:
+
+- count caught fish
+- subtract processed fish from the scoreboard
+- count `Fish`
+- count `Perfect Roe`
+- warn when ESO `Auto-Add to Craft Bag` would interfere with tracked fishing outputs
+
+This makes it better suited for guild fishing events where processed items are part of the total payout picture.
 
 ## Installation
 
@@ -121,11 +166,14 @@ If you want to use the optional sync path, install:
 | `/fpp status` | Show current tracking state |
 | `/fpp update` | Refresh party members |
 | `/fpp filters` | Open the whitelist window |
+| `/fpp loot` | Toggle the loot history window |
+| `/fpp log` | Toggle the loot history window |
 | `/fpp whitelist on` | Enable whitelist mode |
 | `/fpp whitelist off` | Disable whitelist mode |
 | `/fpp sync` | Show optional sync receiver status |
 | `/fppc` | Output current scores to the chat input |
 | `/fpphelp` | Print command help |
+| `/fpploot` | Toggle the loot history window |
 | `/fp` | Legacy alias for `/fpp` |
 | `/fpc` | Legacy alias for `/fppc` |
 
@@ -167,12 +215,20 @@ Use:
 
 The helper addon is designed to stay quiet if the full addon is already installed on that same client.
 
+### Optional Helper Indicators
+
+The members window also shows whether the host has observed helper sync traffic from a party member.
+
+This helps confirm that a helper client is actually talking to the host during event testing.
+
 ## Notes
 
 - Saved variables update on `/reloadui`, logout, or exit
 - Group loot tracking depends on what the ESO API exposes to the host client
 - Some actions are easier to see locally than remotely, which is why optional sync exists as a separate path
 - Gear and motif filters still apply when whitelist mode is active
+- Loot history can be shown or hidden independently of chat logging through the keybind or loot-window commands
+- Fishing outputs can be affected by ESO `Auto-Add to Craft Bag`, so the addon warns when that setting would interfere with tracked fishing results
 
 ## Credits
 

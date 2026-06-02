@@ -22,8 +22,8 @@ local function BuildEventKey(characterName, itemName, quantity, lootType)
 end
 
 local function CleanupObservedEvents(now)
-  for key, timestamp in pairs(observedEvents) do
-    if now - timestamp > DUPLICATE_WINDOW_SECONDS then
+  for key, eventState in pairs(observedEvents) do
+    if now - (eventState.timestamp or 0) > DUPLICATE_WINDOW_SECONDS then
       observedEvents[key] = nil
     end
   end
@@ -53,6 +53,7 @@ function FarmingPartyPlusSyncHost:Initialize()
   protocol:AddField(lib.CreateStringField('senderCharacterName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('senderDisplayName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('itemName', { maxLength = 128 }))
+  protocol:AddField(lib.CreateStringField('itemLink', { maxLength = 255 }))
   protocol:AddField(lib.CreateNumericField('quantity', { minValue = -1000, maxValue = 1000 }))
   protocol:AddField(lib.CreateNumericField('itemType', { numBits = 32 }))
   protocol:AddField(lib.CreateNumericField('equipType', { numBits = 16 }))
@@ -82,23 +83,55 @@ function FarmingPartyPlusSyncHost:IsEnabled()
   return self.enabled == true
 end
 
-function FarmingPartyPlusSyncHost:RecordObservedLoot(characterName, itemName, quantity, lootType)
+function FarmingPartyPlusSyncHost:RecordObservedLoot(characterName, itemName, quantity, lootType, source)
   if not self:IsEnabled() then
     return
   end
 
   local now = GetTimeStamp()
   CleanupObservedEvents(now)
-  observedEvents[BuildEventKey(characterName, itemName, quantity, lootType)] = now
+  local eventKey = BuildEventKey(characterName, itemName, quantity, lootType)
+  local eventState = observedEvents[eventKey] or {
+    nativeCount = 0,
+    syncCount = 0,
+    timestamp = now
+  }
+  eventState.timestamp = now
+  if source == 'sync' then
+    eventState.syncCount = (eventState.syncCount or 0) + 1
+  else
+    eventState.nativeCount = (eventState.nativeCount or 0) + 1
+  end
+  observedEvents[eventKey] = eventState
 end
 
-function FarmingPartyPlusSyncHost:IsDuplicate(data)
-  local eventKey = BuildEventKey(data.senderCharacterName, data.itemName, data.quantity, data.lootType)
-  local timestamp = observedEvents[eventKey]
-  if timestamp == nil then
+function FarmingPartyPlusSyncHost:ConsumeDuplicate(characterName, itemName, quantity, lootType, source)
+  if not self:IsEnabled() then
     return false
   end
-  return GetTimeStamp() - timestamp <= DUPLICATE_WINDOW_SECONDS
+
+  local now = GetTimeStamp()
+  CleanupObservedEvents(now)
+  local eventKey = BuildEventKey(characterName, itemName, quantity, lootType)
+  local eventState = observedEvents[eventKey]
+  if eventState == nil then
+    return false
+  end
+
+  local opposingKey = source == 'sync' and 'nativeCount' or 'syncCount'
+  local remainingCount = eventState[opposingKey] or 0
+  if remainingCount <= 0 then
+    return false
+  end
+
+  eventState[opposingKey] = remainingCount - 1
+  eventState.timestamp = now
+  if (eventState.nativeCount or 0) <= 0 and (eventState.syncCount or 0) <= 0 then
+    observedEvents[eventKey] = nil
+  else
+    observedEvents[eventKey] = eventState
+  end
+  return true
 end
 
 function FarmingPartyPlusSyncHost:OnData(unitTag, data)
@@ -113,9 +146,11 @@ function FarmingPartyPlusSyncHost:OnData(unitTag, data)
   if data.senderCharacterName == localCharacterName then
     return
   end
-  if self:IsDuplicate(data) then
+  if self:ConsumeDuplicate(data.senderCharacterName, data.itemName, data.quantity, data.lootType, 'sync') then
     return
   end
+
+  self:RecordObservedLoot(data.senderCharacterName, data.itemName, data.quantity, data.lootType, 'sync')
 
   local memberList = FarmingPartyPlus.Modules.MemberList
   if memberList ~= nil and memberList.MarkHelperActive ~= nil then

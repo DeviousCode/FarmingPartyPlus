@@ -2,6 +2,25 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [3.0.4] - 2026-06-02
+### Added
+- A craft-bag auto-add warning dialog for fishing sessions so hosts can disable the setting before `Fish` or `Perfect Roe` start bypassing tracked inventory flow.
+
+### Changed
+- Extended the synced loot payload handling so helper-provided `itemLink` data now drives proper item naming, tooltip links, and rarity colors on the host.
+- Host-side synced pricing now prefers the host's own item-link valuation instead of trusting helper fallback values.
+- Synced gutting history now logs consumed fish as `Processed` entries while preserving normal `Received` lines for `Fish` and `Perfect Roe`.
+- Synced loot dedupe now tracks native-vs-helper counts so repeated gutting results do not collapse into missing or duplicated history lines.
+- Fishing-session craft-bag warnings and gutting output handling now mirror the host's local behavior more closely.
+
+### Fixed
+- Restored loot-event handling for gutting outputs with duplicate guards so `Fish` and `Perfect Roe` count and log reliably again.
+- Fixed synced item-link decoding and host-side value resolution so helper items keep correct casing, tooltip links, rarity colors, and prices.
+- Fixed helper-slot reuse and tracked fish state so backpack slot changes stop producing stale-count sync corruption during gutting.
+- Fixed the host sync protocol declaration so it matches the helper's `itemLink`-aware payload shape.
+- Fixed malformed tooltip/link behavior for synced gutting entries that had previously been stored as plain text names.
+- Fixed repeated helper gutting updates so native and synced group-loot copies no longer overcount, undercount, or race each other in loot history.
+
 ## [3.0.3] - 2026-06-01
 ### Added
 - A `Recipes` whitelist category with a shared recipe tracking rule for valuable node recipes.

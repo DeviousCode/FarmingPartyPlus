@@ -37,19 +37,33 @@ end
 
 function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
   local icon = GetItemIcon(itemLink, lootType)
+  local displayQuantity = math.abs(quantity)
+  local displayTotalValue = math.abs(totalValue)
   local itemValueText = FarmingPartyPlus.Settings:DisplayLootValue()
-      and zo_strformat(' - |cFFFFFF<<1>>|r|t16:16:EsoUI/Art/currency/currency_gold.dds|t', FarmingPartyPlus.FormatNumber(totalValue))
+      and zo_strformat(' - |cFFFFFF<<1>>|r|t16:16:EsoUI/Art/currency/currency_gold.dds|t', FarmingPartyPlus.FormatNumber(displayTotalValue))
       or ''
   local itemText
 
-  if quantity == 1 then
+  if displayQuantity == 1 then
     itemText = zo_strformat(icon .. itemLink .. itemValueText)
   else
-    itemText = zo_strformat(icon .. itemLink .. ' |cFFFFFFx' .. quantity .. '|r' .. itemValueText)
+    itemText = zo_strformat(icon .. itemLink .. ' |cFFFFFFx' .. displayQuantity .. '|r' .. itemValueText)
   end
 
   local lootMessage
-  if not lootedByPlayer then
+  if quantity < 0 then
+    if not lootedByPlayer then
+      if not FarmingPartyPlus.Settings:DisplayGroupLoot() then
+        return
+      end
+      lootMessage = zo_strformat('|cFFFFFF<<1>>|r |cCC8844processed|r <<2>>', looterName, itemText)
+    else
+      if not FarmingPartyPlus.Settings:DisplayOwnLoot() then
+        return
+      end
+      lootMessage = zo_strformat('|cCC8844Processed|r <<1>>', itemText)
+    end
+  elseif not lootedByPlayer then
     if not FarmingPartyPlus.Settings:DisplayGroupLoot() then
       return
     end
