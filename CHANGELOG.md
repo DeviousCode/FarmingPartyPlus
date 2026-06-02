@@ -12,6 +12,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Synced gutting history now logs consumed fish as `Processed` entries while preserving normal `Received` lines for `Fish` and `Perfect Roe`.
 - Synced loot dedupe now tracks native-vs-helper counts so repeated gutting results do not collapse into missing or duplicated history lines.
 - Fishing-session craft-bag warnings and gutting output handling now mirror the host's local behavior more closely.
+- Scoreboard display and sync identity handling now align more closely around ESO display names / `@UserID` instead of character-name-first behavior.
 
 ### Fixed
 - Restored loot-event handling for gutting outputs with duplicate guards so `Fish` and `Perfect Roe` count and log reliably again.
@@ -20,6 +21,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Fixed the host sync protocol declaration so it matches the helper's `itemLink`-aware payload shape.
 - Fixed malformed tooltip/link behavior for synced gutting entries that had previously been stored as plain text names.
 - Fixed repeated helper gutting updates so native and synced group-loot copies no longer overcount, undercount, or race each other in loot history.
+- Fixed sync self-ignore, duplicate suppression, and helper-active matching to prefer display-name identity before character-name fallback.
 
 ## [3.0.3] - 2026-06-01
 ### Added

@@ -12,9 +12,9 @@ local function NormalizeText(text)
   return zo_strlower(zo_strformat('<<z:1>>', text))
 end
 
-local function BuildEventKey(characterName, itemName, quantity, lootType)
+local function BuildEventKey(displayName, itemName, quantity, lootType)
   return table.concat({
-    NormalizeText(characterName),
+    NormalizeText(displayName),
     NormalizeText(itemName),
     tostring(quantity or 0),
     tostring(lootType or 0)
@@ -83,14 +83,14 @@ function FarmingPartyPlusSyncHost:IsEnabled()
   return self.enabled == true
 end
 
-function FarmingPartyPlusSyncHost:RecordObservedLoot(characterName, itemName, quantity, lootType, source)
+function FarmingPartyPlusSyncHost:RecordObservedLoot(displayName, itemName, quantity, lootType, source)
   if not self:IsEnabled() then
     return
   end
 
   local now = GetTimeStamp()
   CleanupObservedEvents(now)
-  local eventKey = BuildEventKey(characterName, itemName, quantity, lootType)
+  local eventKey = BuildEventKey(displayName, itemName, quantity, lootType)
   local eventState = observedEvents[eventKey] or {
     nativeCount = 0,
     syncCount = 0,
@@ -105,14 +105,14 @@ function FarmingPartyPlusSyncHost:RecordObservedLoot(characterName, itemName, qu
   observedEvents[eventKey] = eventState
 end
 
-function FarmingPartyPlusSyncHost:ConsumeDuplicate(characterName, itemName, quantity, lootType, source)
+function FarmingPartyPlusSyncHost:ConsumeDuplicate(displayName, itemName, quantity, lootType, source)
   if not self:IsEnabled() then
     return false
   end
 
   local now = GetTimeStamp()
   CleanupObservedEvents(now)
-  local eventKey = BuildEventKey(characterName, itemName, quantity, lootType)
+  local eventKey = BuildEventKey(displayName, itemName, quantity, lootType)
   local eventState = observedEvents[eventKey]
   if eventState == nil then
     return false
@@ -138,19 +138,19 @@ function FarmingPartyPlusSyncHost:OnData(unitTag, data)
   if not self:IsEnabled() then
     return
   end
-  if data == nil or data.senderCharacterName == nil then
+  if data == nil or data.senderDisplayName == nil then
     return
   end
 
-  local localCharacterName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
-  if data.senderCharacterName == localCharacterName then
+  local localDisplayName = UndecorateDisplayName(GetDisplayName('player'))
+  if data.senderDisplayName == localDisplayName then
     return
   end
-  if self:ConsumeDuplicate(data.senderCharacterName, data.itemName, data.quantity, data.lootType, 'sync') then
+  if self:ConsumeDuplicate(data.senderDisplayName, data.itemName, data.quantity, data.lootType, 'sync') then
     return
   end
 
-  self:RecordObservedLoot(data.senderCharacterName, data.itemName, data.quantity, data.lootType, 'sync')
+  self:RecordObservedLoot(data.senderDisplayName, data.itemName, data.quantity, data.lootType, 'sync')
 
   local memberList = FarmingPartyPlus.Modules.MemberList
   if memberList ~= nil and memberList.MarkHelperActive ~= nil then

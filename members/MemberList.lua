@@ -6,6 +6,16 @@ local members = {}
 local saveData = {}
 local Settings
 
+local function FormatDisplayName(displayName)
+  if displayName == nil or displayName == '' then
+    return '@Unknown'
+  end
+  if zo_plainstrfind(displayName, '@') == 1 then
+    return displayName
+  end
+  return '@' .. displayName
+end
+
 FarmingPartyPlusMemberList = ZO_Object:Subclass()
 
 function FarmingPartyPlusMemberList:New()
@@ -151,7 +161,7 @@ function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
     helperIcon:SetAlpha(0.65)
   end
   local farmerButton = GetControl(rowControl, 'FarmerButton')
-  farmerButton:SetText(data.displayName)
+  farmerButton:SetText(FormatDisplayName(data.displayName))
   farmerButton:SetNormalFontColor(0.36, 0.80, 1.00, 1)
   farmerButton:SetMouseOverFontColor(0.60, 0.90, 1.00, 1)
   farmerButton:SetPressedFontColor(0.25, 0.65, 0.92, 1)
@@ -211,6 +221,13 @@ function FarmingPartyPlusMemberList:AddAllGroupMembers()
 end
 
 function FarmingPartyPlusMemberList:MarkHelperActive(characterName, displayName)
+  for memberKey, memberData in pairs(members:GetMembers()) do
+    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
+      members:SetHelperActive(memberKey, true)
+      return
+    end
+  end
+
   local normalizedCharacterName = zo_strformat(SI_UNIT_NAME, characterName or '')
   if normalizedCharacterName ~= '' and members:HasMember(normalizedCharacterName) then
     members:SetHelperActive(normalizedCharacterName, true)
@@ -218,31 +235,21 @@ function FarmingPartyPlusMemberList:MarkHelperActive(characterName, displayName)
   end
 
   self:AddAllGroupMembers()
-  if normalizedCharacterName ~= '' and members:HasMember(normalizedCharacterName) then
-    members:SetHelperActive(normalizedCharacterName, true)
-    return
-  end
-
   for memberKey, memberData in pairs(members:GetMembers()) do
     if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
       members:SetHelperActive(memberKey, true)
       return
     end
   end
-end
 
-local function FormatUserId(displayName)
-  if displayName == nil or displayName == '' then
-    return '@Unknown'
+  if normalizedCharacterName ~= '' and members:HasMember(normalizedCharacterName) then
+    members:SetHelperActive(normalizedCharacterName, true)
+    return
   end
-  if zo_plainstrfind(displayName, '@') == 1 then
-    return displayName
-  end
-  return '@' .. displayName
 end
 
 local function BuildScoreString(rank, farmer)
-  return string.format('%d. %s %sg', rank, FormatUserId(farmer.displayName), FarmingPartyPlus.FormatNumber(farmer.totalValue))
+  return string.format('%d. %s %sg', rank, FormatDisplayName(farmer.displayName), FarmingPartyPlus.FormatNumber(farmer.totalValue))
 end
 
 function FarmingPartyPlusMemberList:PrintScoresToChat()

@@ -214,20 +214,26 @@ local function GetMember(looterName, lootedByPlayer)
 end
 
 local function GetSyncedMember(characterName, displayName)
+  for memberKey, memberData in pairs(Members:GetMembers()) do
+    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
+      return memberKey, memberData
+    end
+  end
+
   local normalizedCharacterName = zo_strformat(SI_UNIT_NAME, characterName or '')
   if normalizedCharacterName ~= '' and Members:HasMember(normalizedCharacterName) then
     return normalizedCharacterName, Members:GetMember(normalizedCharacterName)
   end
 
   MemberList:AddAllGroupMembers()
-  if normalizedCharacterName ~= '' and Members:HasMember(normalizedCharacterName) then
-    return normalizedCharacterName, Members:GetMember(normalizedCharacterName)
-  end
-
   for memberKey, memberData in pairs(Members:GetMembers()) do
     if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
       return memberKey, memberData
     end
+  end
+
+  if normalizedCharacterName ~= '' and Members:HasMember(normalizedCharacterName) then
+    return normalizedCharacterName, Members:GetMember(normalizedCharacterName)
   end
 
   return nil, nil
@@ -403,12 +409,13 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
     return
   end
 
-  if not lootedByPlayer and Sync ~= nil and Sync.ConsumeDuplicate ~= nil and Sync:ConsumeDuplicate(memberKey, GetItemLinkName(itemLink), quantity, lootType, 'native') then
+  local observedDisplayName = looterMember.displayName or memberKey
+  if not lootedByPlayer and Sync ~= nil and Sync.ConsumeDuplicate ~= nil and Sync:ConsumeDuplicate(observedDisplayName, GetItemLinkName(itemLink), quantity, lootType, 'native') then
     return
   end
 
   if Sync ~= nil then
-    Sync:RecordObservedLoot(memberKey, GetItemLinkName(itemLink), quantity, lootType, 'native')
+    Sync:RecordObservedLoot(observedDisplayName, GetItemLinkName(itemLink), quantity, lootType, 'native')
   end
   self:AddNewLootedItem(memberKey, itemLink, itemValue, quantity)
   Logger:LogLootItem(looterMember.displayName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
