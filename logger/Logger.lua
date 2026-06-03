@@ -39,8 +39,9 @@ function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink
   local icon = GetItemIcon(itemLink, lootType)
   local displayQuantity = math.abs(quantity)
   local displayTotalValue = math.abs(totalValue)
+  local valueColor = quantity < 0 and 'FF5555' or 'FFFFFF'
   local itemValueText = FarmingPartyPlus.Settings:DisplayLootValue()
-      and zo_strformat(' - |cFFFFFF<<1>>|r|t16:16:EsoUI/Art/currency/currency_gold.dds|t', FarmingPartyPlus.FormatNumber(displayTotalValue))
+      and zo_strformat(' - |c' .. valueColor .. '<<1>>|r|t16:16:EsoUI/Art/currency/currency_gold.dds|t', FarmingPartyPlus.FormatNumber(displayTotalValue))
       or ''
   local itemText
 
