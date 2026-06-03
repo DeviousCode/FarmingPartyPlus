@@ -23,6 +23,8 @@ for index, label in ipairs(qualityChoiceLabels) do
   qualityValueByLabel[label] = qualityChoiceValues[index]
 end
 
+local ACCOUNT_WIDE_SETTINGS_VERSION = 2
+
 local function ColoredHeader(text, color)
   return string.format('|c%s%s|r', color, text)
 end
@@ -51,6 +53,31 @@ local function CopyTable(source)
   return copy
 end
 
+local function TableHasMeaningfulData(candidate, defaults)
+  if type(candidate) ~= 'table' then
+    return false
+  end
+
+  for key, defaultValue in pairs(defaults) do
+    local candidateValue = candidate[key]
+    if type(defaultValue) == 'table' and type(candidateValue) == 'table' then
+      if TableHasMeaningfulData(candidateValue, defaultValue) then
+        return true
+      end
+    elseif candidateValue ~= nil and candidateValue ~= defaultValue then
+      return true
+    end
+  end
+
+  for key, candidateValue in pairs(candidate) do
+    if defaults[key] == nil and candidateValue ~= nil then
+      return true
+    end
+  end
+
+  return false
+end
+
 FarmingPartyPlusSettings.TRACKING_STATUS = {
   ENABLED = 'ENABLED',
   DISABLED = 'DISABLED'
@@ -64,6 +91,9 @@ end
 
 function FarmingPartyPlusSettings:Initialize()
   local defaults = {
+    storage = {
+      migratedFromCharacter = false
+    },
     excludeFromTracking = {
       gear = false,
       motifs = false
@@ -121,7 +151,23 @@ function FarmingPartyPlusSettings:Initialize()
     valueDecimals = 2
   }
 
-  self.settings = ZO_SavedVars:New('FarmingPartyPlusSettings_db', 1, nil, defaults)
+  local legacyCharacterSettings = ZO_SavedVars:New('FarmingPartyPlusSettings_db', 1, nil, defaults)
+  self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, nil, defaults)
+
+  if self.settings.storage == nil then
+    self.settings.storage = {
+      migratedFromCharacter = false
+    }
+  end
+
+  if self.settings.storage.migratedFromCharacter ~= true and TableHasMeaningfulData(legacyCharacterSettings, defaults) then
+    local migratedSettings = CopyTable(legacyCharacterSettings)
+    migratedSettings.storage = migratedSettings.storage or {}
+    migratedSettings.storage.migratedFromCharacter = true
+    self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, nil, migratedSettings)
+  end
+
+  self.settings.storage.migratedFromCharacter = true
   self:NormalizeWhitelistSettings()
   self:NormalizeWindowSettings()
 
@@ -196,12 +242,15 @@ function FarmingPartyPlusSettings:Initialize()
       name = 'Minimum Item Quality',
       choices = qualityChoiceLabels,
       choicesValues = qualityChoiceValues,
-      tooltip = 'Used when whitelist mode is off.',
+      tooltip = 'Used only when whitelist mode is off.',
       getFunc = function()
         return self:MinimumLootQuality()
       end,
       setFunc = function(value)
         self:ToggleMinimumLootQuality(value)
+      end,
+      disabled = function()
+        return self:UseWhitelistMode()
       end,
       width = 'full'
     },

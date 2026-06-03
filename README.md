@@ -77,6 +77,8 @@ Profiles can be:
 - loaded from any character
 - deleted later if no longer needed
 
+Main addon settings are also stored account-wide, so whitelist choices, profiles, and related configuration no longer drift between characters on the same account.
+
 ### Recipe Value Filtering
 
 Whitelist mode also includes a `Recipes` rule.
@@ -97,6 +99,8 @@ If whitelist mode is turned off, the addon falls back to the more traditional tr
 - motifs on or off
 - self loot on or off
 - group loot on or off
+
+While whitelist mode is enabled, `Minimum Item Quality` is not used and is disabled in the settings panel to avoid cross-character or cross-client confusion during whitelist-driven events.
 
 ### Fishing And Gutting Sessions
 

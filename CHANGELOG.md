@@ -17,6 +17,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - The member scoreboard can now collapse into a tighter two-column layout by hiding the `Best Item` column.
 - Same-client `FarmingPartyPlus` + `FarmingPartyPlusSync` installs can now share fishing and gutting mesh sync outward to other `FarmingPartyPlus` clients without self-echo.
 - Keybinding action labels now use the shorter `FPP` prefix while keeping the main Controls category title unchanged.
+- Main `FarmingPartyPlus` settings now use an account-wide saved-variable store, with one-time migration from the old character-scoped settings profile.
 
 ### Fixed
 - Restored loot-event handling for gutting outputs with duplicate guards so `Fish` and `Perfect Roe` count and log reliably again.
@@ -28,6 +29,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Fixed sync self-ignore, duplicate suppression, and helper-active matching to prefer display-name identity before character-name fallback.
 - Fixed receiver-reset fishing gaps by replaying touched fish-stack claim state on later catches, so another `FarmingPartyPlus` client can rebuild `1 -> 5` style stack-backed totals correctly.
 - Fixed processed loot history entries so the gold value text is colored red when value is being removed.
+- Fixed whitelist-mode settings confusion by disabling the `Minimum Item Quality` control whenever whitelist mode is enabled.
 
 ## [3.0.3] - 2026-06-01
 ### Added
