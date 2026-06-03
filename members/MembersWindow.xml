@@ -1,18 +1,18 @@
 <GuiXml>
   <Controls>
     <TopLevelControl name="FarmingPartyPlusMembersWindow" inherits="FarmingPartyPlusListWindow">
-      <DimensionConstraints minX="550" minY="150" />
+      <DimensionConstraints minX="360" minY="150" />
       <Controls>
         <Label name="$(parent)Title" font="ZoFontHeader3" height="25" inheritAlpha="true" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" verticalAlignment="TOP" horizontalAlignment="CENTER" text="Farming Party Plus Members">
           <Anchor point="TOP" relativeTo="$(parent)" relativePoint="TOP" offsetX="-10" offsetY="5" />
         </Label>
         <Button name="$(parent)FiltersButton" font="ZoFontGame" text="Filters">
-          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="16" offsetY="12" />
+          <Anchor point="TOP" relativeTo="$(parent)Title" relativePoint="BOTTOM" offsetX="0" offsetY="6" />
           <Dimensions x="90" y="26" />
           <OnClicked>FarmingPartyPlus.Modules.FilterWindow:ToggleWindow()</OnClicked>
         </Button>
         <Control name="$(parent)Headers">
-          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="10" offsetY="51" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="10" offsetY="74" />
           <Dimensions y="32" />
           <Controls>
             <Button name="$(parent)Farmer" mouseEnabled="true">
@@ -40,7 +40,7 @@
               <Anchor point="TOPLEFT" relativeTo="$(parent)BestItemName" relativePoint="TOPRIGHT" offsetX="25" />
               <Dimensions x="100" y="32" />
               <Controls>
-                <Label name="$(parent)TotalValue" font="ZoFontGame" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" modifyTextType="NONE" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="Total Value">
+                <Label name="$(parent)TotalValue" font="ZoFontGame" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" modifyTextType="NONE" horizontalAlignment="CENTER" verticalAlignment="CENTER" text="Total Value">
                   <Anchor point="TOPLEFT" relativePoint="TOPLEFT"/>
                   <Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT"/>
                 </Label>

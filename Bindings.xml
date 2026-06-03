@@ -4,6 +4,9 @@
       <Action name="TOGGLE_SCOREBOARD_PLUS">
         <Down>FarmingPartyPlusMemberList:ToggleMembersWindow()</Down>
       </Action>
+      <Action name="TOGGLE_COMPACT_SCOREBOARD_PLUS">
+        <Down>FarmingPartyPlus.Settings:ToggleCompactMemberWindow()</Down>
+      </Action>
       <Action name="TOGGLE_ITEM_BREAKDOWN_PLUS">
         <Down>FarmingPartyPlusMemberItems:ToggleWindow()</Down>
       </Action>

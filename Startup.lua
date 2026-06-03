@@ -55,6 +55,7 @@ function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
   end
 
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_SCOREBOARD_PLUS', 'Toggle Farming Party Plus Scoreboard')
+  ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_COMPACT_SCOREBOARD_PLUS', 'Toggle Farming Party Plus Compact Scoreboard')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_ITEM_BREAKDOWN_PLUS', 'Toggle Farming Party Plus Item Breakdown')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_FILTERS_PLUS', 'Toggle Farming Party Plus Filters')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_LOOT_HISTORY_PLUS', 'Toggle Farming Party Plus Loot History')
@@ -142,6 +143,15 @@ function FarmingPartyPlus:ConsoleCommands()
       self.Modules.FilterWindow:ToggleWindow()
     elseif trimmedParam == 'loot' or trimmedParam == 'log' then
       FarmingPartyPlus.Settings:ToggleLootWindow()
+    elseif trimmedParam == 'compact' then
+      local isCompact = FarmingPartyPlus.Settings:ToggleCompactMemberWindow()
+      d(string.format('[Farming Party Plus]: Compact scoreboard mode %s', isCompact and 'is on' or 'is off'))
+    elseif trimmedParam == 'compact on' then
+      FarmingPartyPlus.Settings:ToggleCompactMemberWindow(true)
+      d('[Farming Party Plus]: Compact scoreboard mode is on')
+    elseif trimmedParam == 'compact off' then
+      FarmingPartyPlus.Settings:ToggleCompactMemberWindow(false)
+      d('[Farming Party Plus]: Compact scoreboard mode is off')
     elseif trimmedParam == 'sync' then
       if self.Modules.Sync ~= nil and self.Modules.Sync:IsEnabled() then
         d('[Farming Party Plus]: Optional sync receiver is enabled')
@@ -173,6 +183,7 @@ function FarmingPartyPlus:ConsoleCommands()
     d('/fpp update           Sync tracked members with current group.')
     d('/fpp filters          Open the node whitelist window.')
     d('/fpp loot             Show or hide the loot history window.')
+    d('/fpp compact          Toggle compact scoreboard mode.')
     d('/fpp sync             Show optional sync receiver status.')
     d('/fpp whitelist on     Count only selected whitelist items.')
     d('/fpp whitelist off    Use the original quality-based filters.')

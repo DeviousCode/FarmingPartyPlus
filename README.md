@@ -140,7 +140,16 @@ There is also an optional separate helper addon:
 
 This is not required for normal host tracking.
 
-Its purpose is to provide optional sync support for cases where local-only events are not fully exposed to the host client. If it is not installed, the main addon still works normally.
+Its main purpose is to improve fishing-session accuracy, especially for fish gutting and related outputs that are easier to detect on the local client than on the host.
+
+In practice, it is most useful for:
+
+- processed fish subtraction
+- `Fish`
+- `Perfect Roe`
+- other fishing-session inventory changes the host may not see reliably on its own
+
+If it is not installed, the main addon still works normally for standard host-visible loot tracking, but fishing and gutting events may be less complete than they are with the helper installed on non-host group members.
 
 ### Optional Sync Library
 

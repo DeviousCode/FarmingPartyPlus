@@ -82,10 +82,15 @@ function FarmingPartyPlusSettings:Initialize()
     window = {
       transparency = 100,
       backgroundTransparency = 100,
+      compactMode = false,
       positionLeft = 0,
       positionTop = 0,
       width = 650,
-      height = 150
+      height = 150,
+      normalWidth = 650,
+      normalHeight = 150,
+      compactWidth = 390,
+      compactHeight = 150
     },
     itemsWindow = {
       transparency = 100,
@@ -118,6 +123,7 @@ function FarmingPartyPlusSettings:Initialize()
 
   self.settings = ZO_SavedVars:New('FarmingPartyPlusSettings_db', 1, nil, defaults)
   self:NormalizeWhitelistSettings()
+  self:NormalizeWindowSettings()
 
   FarmingPartyPlusWindow:SetHandler(
     'OnResizeStop',
@@ -394,6 +400,18 @@ function FarmingPartyPlusSettings:Initialize()
       width = 'full'
     },
     {
+      type = 'checkbox',
+      name = 'Use compact scoreboard window',
+      tooltip = 'Hide the Best Item column and shrink the member scoreboard to a tighter layout.',
+      getFunc = function()
+        return self:IsCompactMemberWindow()
+      end,
+      setFunc = function(value)
+        self:ToggleCompactMemberWindow(value)
+      end,
+      width = 'full'
+    },
+    {
       type = 'slider',
       name = 'Member window background opacity',
       tooltip = 'Change the opacity of the background of the member window.',
@@ -484,6 +502,25 @@ function FarmingPartyPlus:WindowResizeHandler(control)
   textBuffer:SetWidth(width)
 end
 
+function FarmingPartyPlusSettings:NormalizeWindowSettings()
+  local window = self.settings.window
+  if window.compactMode == nil then
+    window.compactMode = false
+  end
+  if window.normalWidth == nil then
+    window.normalWidth = window.width or 650
+  end
+  if window.normalHeight == nil then
+    window.normalHeight = window.height or 150
+  end
+  if window.compactWidth == nil then
+    window.compactWidth = 390
+  end
+  if window.compactHeight == nil then
+    window.compactHeight = window.height or 150
+  end
+end
+
 function FarmingPartyPlusSettings:NormalizeWhitelistSettings()
   local whitelist = self.settings.lootWhitelist
   if whitelist.items == nil then
@@ -570,6 +607,10 @@ end
 
 function FarmingPartyPlusSettings:Window()
   return self.settings.window
+end
+
+function FarmingPartyPlusSettings:IsCompactMemberWindow()
+  return self.settings.window.compactMode == true
 end
 
 function FarmingPartyPlusSettings:ItemsWindow()
@@ -777,6 +818,36 @@ end
 
 function FarmingPartyPlusSettings:ToggleLootWindow()
   self:ToggleOnWindow(not self:DisplayOnWindow())
+end
+
+function FarmingPartyPlusSettings:ToggleCompactMemberWindow(value)
+  local window = self.settings.window
+  if value == nil then
+    value = not self:IsCompactMemberWindow()
+  end
+  if window.compactMode == value then
+    return value
+  end
+
+  local memberList = FarmingPartyPlus.Modules.MemberList
+  if memberList ~= nil and memberList.SaveCurrentDimensionsForMode ~= nil then
+    memberList:SaveCurrentDimensionsForMode(window.compactMode)
+  end
+
+  window.compactMode = value
+  if value then
+    window.width = window.compactWidth
+    window.height = window.compactHeight
+  else
+    window.width = window.normalWidth
+    window.height = window.normalHeight
+  end
+
+  if memberList ~= nil and memberList.ApplyCompactMode ~= nil then
+    memberList:ApplyCompactMode()
+  end
+
+  return value
 end
 
 function FarmingPartyPlusSettings:ToggleOwnLoot(value)

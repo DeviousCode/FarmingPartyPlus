@@ -5,6 +5,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 ## [3.0.4] - 2026-06-02
 ### Added
 - A craft-bag auto-add warning dialog for fishing sessions so hosts can disable the setting before `Fish` or `Perfect Roe` start bypassing tracked inventory flow.
+- A compact scoreboard mode with a settings toggle, slash command support, and a dedicated keybind.
 
 ### Changed
 - Extended the synced loot payload handling so helper-provided `itemLink` data now drives proper item naming, tooltip links, and rarity colors on the host.
@@ -13,6 +14,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Synced loot dedupe now tracks native-vs-helper counts so repeated gutting results do not collapse into missing or duplicated history lines.
 - Fishing-session craft-bag warnings and gutting output handling now mirror the host's local behavior more closely.
 - Scoreboard display and sync identity handling now align more closely around ESO display names / `@UserID` instead of character-name-first behavior.
+- The member scoreboard can now collapse into a tighter two-column layout by hiding the `Best Item` column.
 
 ### Fixed
 - Restored loot-event handling for gutting outputs with duplicate guards so `Fish` and `Perfect Roe` count and log reliably again.

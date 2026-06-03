@@ -1,5 +1,26 @@
 local ADDON_NAME = 'FarmingPartyPlus'
 local RELEASE_COUNT = 1
+local NORMAL_LAYOUT = {
+  farmerHeaderWidth = 185,
+  bestHeaderOffset = 25,
+  bestHeaderWidth = 180,
+  totalHeaderOffset = 25,
+  totalHeaderWidth = 100,
+  farmerRowWidth = 170,
+  bestRowOffset = 25,
+  bestRowWidth = 180,
+  totalRowOffset = 25,
+  totalRowWidth = 100,
+  inspectOffset = 10
+}
+local COMPACT_LAYOUT = {
+  farmerHeaderWidth = 215,
+  totalHeaderOffset = 10,
+  totalHeaderWidth = 116,
+  farmerRowWidth = 205,
+  totalRowOffset = 10,
+  totalRowWidth = 116
+}
 
 local listContainer
 local members = {}
@@ -44,6 +65,7 @@ function FarmingPartyPlusMemberList:Initialize()
   self:SetWindowBackgroundTransparency()
   self:AddAllGroupMembers()
   self:SetupScrollList()
+  self:ApplyCompactMode()
   self:UpdateScrollList()
 
   if Settings:Status() == Settings.TRACKING_STATUS.ENABLED then
@@ -74,6 +96,7 @@ function FarmingPartyPlusMemberList:Finalize()
   Settings:Window().positionTop = FarmingPartyPlusMembersWindow:GetTop()
   Settings:Window().width = FarmingPartyPlusMembersWindow:GetWidth()
   Settings:Window().height = FarmingPartyPlusMembersWindow:GetHeight()
+  self:SaveCurrentDimensionsForMode(Settings:IsCompactMemberWindow())
   saveData.members = members:GetCleanMembers()
 end
 
@@ -95,6 +118,87 @@ function FarmingPartyPlusMemberList:WindowResizeHandler(control)
   local width, height = control:GetDimensions()
   Settings:Window().width = width
   Settings:Window().height = height
+  self:SaveCurrentDimensionsForMode(Settings:IsCompactMemberWindow(), width, height)
+  ZO_ScrollList_Commit(listContainer)
+end
+
+function FarmingPartyPlusMemberList:GetLayout()
+  if Settings:IsCompactMemberWindow() then
+    return COMPACT_LAYOUT
+  end
+  return NORMAL_LAYOUT
+end
+
+function FarmingPartyPlusMemberList:SaveCurrentDimensionsForMode(isCompact, width, height)
+  local window = Settings:Window()
+  local currentWidth = width or FarmingPartyPlusMembersWindow:GetWidth()
+  local currentHeight = height or FarmingPartyPlusMembersWindow:GetHeight()
+  if isCompact then
+    window.compactWidth = currentWidth
+    window.compactHeight = currentHeight
+  else
+    window.normalWidth = currentWidth
+    window.normalHeight = currentHeight
+  end
+end
+
+function FarmingPartyPlusMemberList:ApplyHeaderLayout(layout)
+  local headers = FarmingPartyPlusMembersWindow:GetNamedChild('Headers')
+  local farmerHeader = headers:GetNamedChild('Farmer')
+  local bestItemHeader = headers:GetNamedChild('BestItemName')
+  local totalValueHeader = headers:GetNamedChild('TotalValue')
+
+  farmerHeader:SetWidth(layout.farmerHeaderWidth)
+  bestItemHeader:SetHidden(Settings:IsCompactMemberWindow())
+  bestItemHeader:ClearAnchors()
+  totalValueHeader:ClearAnchors()
+
+  if Settings:IsCompactMemberWindow() then
+    totalValueHeader:SetAnchor(TOPLEFT, farmerHeader, TOPRIGHT, layout.totalHeaderOffset, 0)
+  else
+    bestItemHeader:SetAnchor(TOPLEFT, farmerHeader, TOPRIGHT, layout.bestHeaderOffset, 0)
+    bestItemHeader:SetAnchor(BOTTOMLEFT, farmerHeader, BOTTOMRIGHT, layout.bestHeaderOffset, 0)
+    bestItemHeader:SetWidth(layout.bestHeaderWidth)
+    totalValueHeader:SetAnchor(TOPLEFT, bestItemHeader, TOPRIGHT, layout.totalHeaderOffset, 0)
+  end
+
+  totalValueHeader:SetWidth(layout.totalHeaderWidth)
+end
+
+function FarmingPartyPlusMemberList:ApplyRowLayout(rowControl, layout)
+  local bestItemControl = GetControl(rowControl, 'BestItemName')
+  local farmerButton = GetControl(rowControl, 'FarmerButton')
+  local totalValueLabel = GetControl(rowControl, 'TotalValue')
+  local inspectButton = GetControl(rowControl, 'InspectButton')
+
+  farmerButton:SetWidth(layout.farmerRowWidth)
+  bestItemControl:SetHidden(Settings:IsCompactMemberWindow())
+  inspectButton:SetHidden(Settings:IsCompactMemberWindow())
+  bestItemControl:ClearAnchors()
+  totalValueLabel:ClearAnchors()
+
+  if Settings:IsCompactMemberWindow() then
+    totalValueLabel:SetAnchor(TOPLEFT, farmerButton, TOPRIGHT, layout.totalRowOffset, 0)
+    totalValueLabel:SetAnchor(BOTTOMLEFT, farmerButton, BOTTOMRIGHT, layout.totalRowOffset, 0)
+  else
+    bestItemControl:SetAnchor(TOPLEFT, farmerButton, TOPRIGHT, layout.bestRowOffset, -3)
+    bestItemControl:SetAnchor(BOTTOMLEFT, farmerButton, BOTTOMRIGHT, layout.bestRowOffset, 3)
+    bestItemControl:SetWidth(layout.bestRowWidth)
+    totalValueLabel:SetAnchor(TOPLEFT, bestItemControl, TOPRIGHT, layout.totalRowOffset, 0)
+    totalValueLabel:SetAnchor(BOTTOMLEFT, bestItemControl, BOTTOMRIGHT, layout.totalRowOffset, 0)
+    inspectButton:ClearAnchors()
+    inspectButton:SetAnchor(LEFT, totalValueLabel, RIGHT, layout.inspectOffset, 0)
+  end
+
+  totalValueLabel:SetWidth(layout.totalRowWidth)
+end
+
+function FarmingPartyPlusMemberList:ApplyCompactMode()
+  local windowSettings = Settings:Window()
+  local layout = self:GetLayout()
+
+  FarmingPartyPlusMembersWindow:SetDimensions(windowSettings.width, windowSettings.height)
+  self:ApplyHeaderLayout(layout)
   ZO_ScrollList_Commit(listContainer)
 end
 
@@ -151,6 +255,7 @@ end
 function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
   rowControl.data = rowData
   local data = rowData.rawData
+  self:ApplyRowLayout(rowControl, self:GetLayout())
   GetControl(rowControl, 'FarmerId'):SetText(data.id)
   local helperIcon = GetControl(rowControl, 'HelperStatusIcon')
   if data.helperActive then
@@ -166,7 +271,9 @@ function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
   farmerButton:SetMouseOverFontColor(0.60, 0.90, 1.00, 1)
   farmerButton:SetPressedFontColor(0.25, 0.65, 0.92, 1)
   GetControl(rowControl, 'BestItemName'):SetText(data.bestItem.itemLink)
-  GetControl(rowControl, 'TotalValue'):SetText(FarmingPartyPlus.FormatNumber(data.totalValue) .. 'g')
+  local totalValueLabel = GetControl(rowControl, 'TotalValue')
+  totalValueLabel:SetHorizontalAlignment(Settings:IsCompactMemberWindow() and TEXT_ALIGN_CENTER or TEXT_ALIGN_RIGHT)
+  totalValueLabel:SetText(FarmingPartyPlus.FormatNumber(data.totalValue) .. 'g')
 end
 
 function FarmingPartyPlusMemberList.onResize()
