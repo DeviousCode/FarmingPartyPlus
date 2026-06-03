@@ -24,8 +24,12 @@ local Logger
 local Settings
 local Sync
 local trackedLocalFishSlots = {}
+local trackedSyncedFishSlots = {}
 local recentLocalGuttingOutputs = {}
 local AUTO_ADD_WARNING_DIALOG_NAME = 'FarmingPartyPlusCraftBagWarningDialog'
+local SYNC_KIND_DELTA = 0
+local SYNC_KIND_FISH_STACK_STATE = 1
+local SYNC_KIND_FISH_STACK_DELTA = 2
 
 local function BuildBagSlotKey(bagId, slotIndex)
   return string.format('%d:%d', bagId, slotIndex)
@@ -93,6 +97,7 @@ end
 
 function FarmingPartyPlusLoot:ClearSessionState()
   ZO_ClearTable(trackedLocalFishSlots)
+  ZO_ClearTable(trackedSyncedFishSlots)
   ZO_ClearTable(recentLocalGuttingOutputs)
   self.hasShownCraftBagAutoAddWarning = false
 end
@@ -444,8 +449,19 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
   local quantity = tonumber(data.quantity) or 1
   local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
   local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or itemValue
+  local syncKind = tonumber(data.syncKind) or SYNC_KIND_DELTA
 
   if quantity == 0 then
+    return
+  end
+
+  if syncKind == SYNC_KIND_FISH_STACK_STATE then
+    self:ApplySyncedFishStackState(memberKey, trackedItem, resolvedItemValue, quantity, data)
+    return
+  elseif syncKind == SYNC_KIND_FISH_STACK_DELTA then
+    self:AdjustLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
+    self:RememberSyncedFishSlot(memberKey, trackedItem, resolvedItemValue, data)
+    Logger:LogLootItem(looterMember.displayName, false, trackedItem, quantity, resolvedItemValue * math.abs(quantity), data.lootType or 0)
     return
   end
 
@@ -455,6 +471,62 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
   else
     self:AdjustLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
     Logger:LogLootItem(looterMember.displayName, false, trackedItem, quantity, resolvedItemValue * math.abs(quantity), data.lootType or 0)
+  end
+end
+
+function FarmingPartyPlusLoot:GetSyncedFishSlotState(memberKey, bagId, slotIndex)
+  local memberSlots = trackedSyncedFishSlots[memberKey]
+  if memberSlots == nil then
+    return nil
+  end
+  return memberSlots[BuildBagSlotKey(bagId, slotIndex)]
+end
+
+function FarmingPartyPlusLoot:RememberSyncedFishSlot(memberKey, itemLink, itemValue, data)
+  local bagId = tonumber(data.bagId) or 0
+  local slotIndex = tonumber(data.slotIndex) or 0
+  if bagId <= 0 and slotIndex <= 0 then
+    return
+  end
+
+  local claimedCount = tonumber(data.claimedCount) or 0
+  local memberSlots = trackedSyncedFishSlots[memberKey]
+  if memberSlots == nil then
+    memberSlots = {}
+    trackedSyncedFishSlots[memberKey] = memberSlots
+  end
+
+  local slotKey = BuildBagSlotKey(bagId, slotIndex)
+  if claimedCount <= 0 then
+    memberSlots[slotKey] = nil
+    return
+  end
+
+  memberSlots[slotKey] = {
+    itemLink = itemLink,
+    itemValue = itemValue,
+    claimedCount = claimedCount
+  }
+end
+
+function FarmingPartyPlusLoot:ApplySyncedFishStackState(memberKey, itemLink, itemValue, caughtQuantity, data)
+  local bagId = tonumber(data.bagId) or 0
+  local slotIndex = tonumber(data.slotIndex) or 0
+  if bagId <= 0 and slotIndex <= 0 then
+    return
+  end
+
+  local previousState = self:GetSyncedFishSlotState(memberKey, bagId, slotIndex)
+  local previousClaimedCount = previousState ~= nil and (previousState.claimedCount or 0) or 0
+  local currentClaimedCount = tonumber(data.claimedCount) or 0
+  local correctionDelta = currentClaimedCount - previousClaimedCount - math.max(tonumber(caughtQuantity) or 0, 0)
+
+  self:RememberSyncedFishSlot(memberKey, itemLink, itemValue, data)
+
+  if correctionDelta > 0 then
+    self:AddNewLootedItem(memberKey, itemLink, itemValue, correctionDelta)
+  elseif correctionDelta < 0 then
+    self:AdjustLootedItem(memberKey, itemLink, itemValue, correctionDelta)
   end
 end
 

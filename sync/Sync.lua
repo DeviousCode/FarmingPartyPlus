@@ -1,5 +1,11 @@
 local SYNC_PROTOCOL_ID = 391
+local MESH_SYNC_PROTOCOL_ID = 392
+local SYNC_PROTOCOL_NAME = 'FarmingPartyPlusSyncLoot'
+local MESH_SYNC_PROTOCOL_NAME = 'FarmingPartyPlusMeshLoot'
 local DUPLICATE_WINDOW_SECONDS = 5
+local SYNC_KIND_DELTA = 0
+local SYNC_KIND_FISH_STACK_STATE = 1
+local SYNC_KIND_FISH_STACK_DELTA = 2
 
 FarmingPartyPlusSyncHost = ZO_Object:Subclass()
 
@@ -38,6 +44,7 @@ end
 function FarmingPartyPlusSyncHost:Initialize()
   self.enabled = false
   self.protocol = nil
+  self.meshProtocol = nil
 
   local lib = LibGroupBroadcast
   if type(lib) ~= 'table' then
@@ -49,7 +56,13 @@ function FarmingPartyPlusSyncHost:Initialize()
     return
   end
 
-  local protocol = handler:DeclareProtocol(SYNC_PROTOCOL_ID, 'FarmingPartyPlusSyncLoot')
+  self.protocol = self:DeclareProtocol(handler, lib, SYNC_PROTOCOL_ID, SYNC_PROTOCOL_NAME)
+  self.meshProtocol = self:DeclareProtocol(handler, lib, MESH_SYNC_PROTOCOL_ID, MESH_SYNC_PROTOCOL_NAME)
+  self.enabled = true
+end
+
+function FarmingPartyPlusSyncHost:DeclareProtocol(handler, lib, protocolId, protocolName)
+  local protocol = handler:DeclareProtocol(protocolId, protocolName)
   protocol:AddField(lib.CreateStringField('senderCharacterName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('senderDisplayName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('itemName', { maxLength = 128 }))
@@ -60,6 +73,10 @@ function FarmingPartyPlusSyncHost:Initialize()
   protocol:AddField(lib.CreateNumericField('quality', { numBits = 8 }))
   protocol:AddField(lib.CreateNumericField('lootType', { numBits = 16 }))
   protocol:AddField(lib.CreateNumericField('itemValue', { numBits = 32 }))
+  protocol:AddField(lib.CreateNumericField('syncKind', { numBits = 8 }))
+  protocol:AddField(lib.CreateNumericField('bagId', { numBits = 8 }))
+  protocol:AddField(lib.CreateNumericField('slotIndex', { numBits = 16 }))
+  protocol:AddField(lib.CreateNumericField('claimedCount', { numBits = 16 }))
   protocol:OnData(function(unitTag, data)
     self:OnData(unitTag, data)
   end)
@@ -67,9 +84,7 @@ function FarmingPartyPlusSyncHost:Initialize()
     isRelevantInCombat = false,
     replaceQueuedMessages = false
   })
-
-  self.protocol = protocol
-  self.enabled = true
+  return protocol
 end
 
 function FarmingPartyPlusSyncHost:Finalize()
@@ -81,6 +96,30 @@ end
 
 function FarmingPartyPlusSyncHost:IsEnabled()
   return self.enabled == true
+end
+
+function FarmingPartyPlusSyncHost:SendMeshDelta(data)
+  if not self:IsEnabled() or self.meshProtocol == nil or data == nil then
+    return false
+  end
+
+  self.meshProtocol:Send({
+    senderCharacterName = data.senderCharacterName,
+    senderDisplayName = data.senderDisplayName,
+    itemName = data.itemName,
+    itemLink = data.itemLink,
+    quantity = data.quantity,
+    itemType = data.itemType,
+    equipType = data.equipType,
+    quality = data.quality,
+    lootType = data.lootType,
+    itemValue = data.itemValue,
+    syncKind = data.syncKind or SYNC_KIND_DELTA,
+    bagId = data.bagId or 0,
+    slotIndex = data.slotIndex or 0,
+    claimedCount = data.claimedCount or 0
+  })
+  return true
 end
 
 function FarmingPartyPlusSyncHost:RecordObservedLoot(displayName, itemName, quantity, lootType, source)

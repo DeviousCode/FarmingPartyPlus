@@ -112,6 +112,8 @@ It can:
 
 This makes it better suited for guild fishing events where processed items are part of the total payout picture.
 
+It also now supports stack-aware fishing sync recovery for other `FarmingPartyPlus` clients, so if another client resets and you later catch another fish into the same tracked stack, the receiver can rebuild the correct stack-backed total instead of only seeing the new `+1`.
+
 ## Installation
 
 ### Main Addon
@@ -150,6 +152,8 @@ In practice, it is most useful for:
 - other fishing-session inventory changes the host may not see reliably on its own
 
 If it is not installed, the main addon still works normally for standard host-visible loot tracking, but fishing and gutting events may be less complete than they are with the helper installed on non-host group members.
+
+If both addons are installed on the same client, the helper can still contribute local fishing and gutting sync to other `FarmingPartyPlus` users in the group.
 
 ### Optional Sync Library
 
@@ -219,10 +223,8 @@ This is the standard setup.
 Use:
 
 - `FarmingPartyPlus` on the host
-- `FarmingPartyPlusSync` on helper-only clients
+- `FarmingPartyPlusSync` on helper-only clients, or on full-addon clients that also want to contribute local fishing and gutting mesh sync
 - `LibGroupBroadcast` on both clients
-
-The helper addon is designed to stay quiet if the full addon is already installed on that same client.
 
 ### Optional Helper Indicators
 
