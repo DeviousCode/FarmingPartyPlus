@@ -1,5 +1,5 @@
 local ADDON_NAME = 'Farming Party Plus'
-local ADDON_VERSION = '3.0.4'
+local ADDON_VERSION = '3.0.5'
 local DEFAULT_MINIMUM_RECIPE_VALUE = 3000
 local MINIMUM_RECIPE_VALUE = 100
 local MAXIMUM_RECIPE_VALUE = 50000
@@ -85,7 +85,7 @@ FarmingPartyPlusSettings.TRACKING_STATUS = {
 
 function FarmingPartyPlusSettings:New()
   local obj = ZO_Object.New(self)
-  self:Initialize()
+  obj:Initialize()
   return obj
 end
 

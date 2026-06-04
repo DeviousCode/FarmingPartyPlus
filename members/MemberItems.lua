@@ -7,7 +7,7 @@ FarmingPartyPlusMemberItems = ZO_Object:Subclass()
 
 function FarmingPartyPlusMemberItems:New()
   local obj = ZO_Object.New(self)
-  self:Initialize()
+  obj:Initialize()
   return obj
 end
 
@@ -56,8 +56,12 @@ function FarmingPartyPlusMemberItems:UpdateScrollList()
 
   local memberItemArray = {}
   for key, value in pairs(members:GetItemsForMember(memberKey)) do
-    value.itemLink = key
-    memberItemArray[#memberItemArray + 1] = value
+    memberItemArray[#memberItemArray + 1] = {
+      itemLink = key,
+      count = value.count,
+      value = value.value,
+      totalValue = value.totalValue
+    }
   end
 
   table.sort(memberItemArray, function(left, right)

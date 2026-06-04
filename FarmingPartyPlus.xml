@@ -12,8 +12,8 @@
         end
       </OnUpdate>
       <DimensionConstraints minX="400" minY="80" />
-      <OnMoveStart>FarmingPartyPlusSettings:MoveStart()</OnMoveStart>
-      <OnMoveStop>FarmingPartyPlusSettings:MoveStop()</OnMoveStop>
+      <OnMoveStart>if FarmingPartyPlus.Settings ~= nil then FarmingPartyPlus.Settings:MoveStart() end</OnMoveStart>
+      <OnMoveStop>if FarmingPartyPlus.Settings ~= nil then FarmingPartyPlus.Settings:MoveStop() end</OnMoveStop>
 
       <Controls>
         <Backdrop name="$(parent)BG" inherits="ZO_DefaultBackdrop"/>

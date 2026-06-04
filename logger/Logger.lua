@@ -35,7 +35,7 @@ local function CreateTimestamp()
   return zo_strformat('|cFFFFFF<<1>>|r', timestamp:gsub('%a+', replace))
 end
 
-function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+local function BuildItemText(itemLink, quantity, totalValue, lootType)
   local icon = GetItemIcon(itemLink, lootType)
   local displayQuantity = math.abs(quantity)
   local displayTotalValue = math.abs(totalValue)
@@ -50,6 +50,21 @@ function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink
   else
     itemText = zo_strformat(icon .. itemLink .. ' |cFFFFFFx' .. displayQuantity .. '|r' .. itemValueText)
   end
+
+  return itemText
+end
+
+local function EmitLootMessage(lootMessage)
+  if FarmingPartyPlus.Settings:DisplayInChat() then
+    CHAT_SYSTEM:AddMessage(lootMessage)
+  end
+
+  local timestamp = FarmingPartyPlus.Settings:ShowWindowTimestamp() and CreateTimestamp() or ''
+  FarmingPartyPlusWindowBuffer:AddMessage(timestamp .. ' ' .. lootMessage, 255, 255, 0, 1)
+end
+
+function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+  local itemText = BuildItemText(itemLink, quantity, totalValue, lootType)
 
   local lootMessage
   if quantity < 0 then
@@ -76,10 +91,24 @@ function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink
     lootMessage = zo_strformat('|c228B22Received|r <<1>>', itemText)
   end
 
-  if FarmingPartyPlus.Settings:DisplayInChat() then
-    CHAT_SYSTEM:AddMessage(lootMessage)
+  EmitLootMessage(lootMessage)
+end
+
+function FarmingPartyPlusLogger:LogStackFound(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+  local itemText = BuildItemText(itemLink, quantity, totalValue, lootType)
+  local lootMessage
+
+  if not lootedByPlayer then
+    if not FarmingPartyPlus.Settings:DisplayGroupLoot() then
+      return
+    end
+    lootMessage = zo_strformat('|cFFFFFF<<1>>|r |c66B3FFstack found|r <<2>>', looterName, itemText)
+  else
+    if not FarmingPartyPlus.Settings:DisplayOwnLoot() then
+      return
+    end
+    lootMessage = zo_strformat('|c66B3FFStack Found|r <<1>>', itemText)
   end
 
-  local timestamp = FarmingPartyPlus.Settings:ShowWindowTimestamp() and CreateTimestamp() or ''
-  FarmingPartyPlusWindowBuffer:AddMessage(timestamp .. ' ' .. lootMessage, 255, 255, 0, 1)
+  EmitLootMessage(lootMessage)
 end

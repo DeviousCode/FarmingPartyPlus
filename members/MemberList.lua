@@ -41,7 +41,7 @@ FarmingPartyPlusMemberList = ZO_Object:Subclass()
 
 function FarmingPartyPlusMemberList:New()
   local obj = ZO_Object.New(self)
-  self:Initialize()
+  obj:Initialize()
   return obj
 end
 
@@ -82,12 +82,20 @@ function FarmingPartyPlusMemberList:AddEventHandlers()
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_LEFT, function(...)
     self:OnMemberLeft(...)
   end)
+  EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_CONNECTED_STATUS, function(...)
+    self:RefreshOnlineStates()
+  end)
+  EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_GROUP_UPDATE, function(...)
+    self:RefreshOnlineStates()
+  end)
   Settings:ToggleStatusValue(Settings.TRACKING_STATUS.ENABLED)
 end
 
 function FarmingPartyPlusMemberList:RemoveEventHandlers()
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_JOINED)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_LEFT)
+  EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_CONNECTED_STATUS)
+  EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_UPDATE)
   Settings:ToggleStatusValue(Settings.TRACKING_STATUS.DISABLED)
 end
 
@@ -204,6 +212,7 @@ end
 
 function FarmingPartyPlusMemberList:OnMemberJoined()
   self:AddAllGroupMembers()
+  self:RefreshOnlineStates()
 end
 
 function FarmingPartyPlusMemberList:OnMemberLeft(event, memberName, reason, wasLocalPlayer)
@@ -218,6 +227,7 @@ function FarmingPartyPlusMemberList:OnMemberLeft(event, memberName, reason, wasL
       end
     end
   end
+  self:RefreshOnlineStates()
 end
 
 function FarmingPartyPlusMemberList:SetupScrollList()
@@ -234,8 +244,15 @@ function FarmingPartyPlusMemberList:UpdateScrollList()
   local memberArray = {}
   for _, memberKey in ipairs(members:GetKeys()) do
     local member = members:GetMember(memberKey)
-    member.id = memberKey
-    memberArray[#memberArray + 1] = member
+    memberArray[#memberArray + 1] = {
+      id = memberKey,
+      bestItem = member.bestItem,
+      totalValue = member.totalValue,
+      items = member.items,
+      displayName = member.displayName,
+      helperActive = member.helperActive,
+      isOnline = member.isOnline ~= false
+    }
   end
 
   table.sort(memberArray, function(left, right)
@@ -258,21 +275,50 @@ function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
   self:ApplyRowLayout(rowControl, self:GetLayout())
   GetControl(rowControl, 'FarmerId'):SetText(data.id)
   local helperIcon = GetControl(rowControl, 'HelperStatusIcon')
-  if data.helperActive then
-    helperIcon:SetColor(0.45, 0.95, 0.55, 1)
-    helperIcon:SetAlpha(1)
+  local isLocalPlayer = data.id == zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
+  local isOnline = data.isOnline ~= false
+  if isLocalPlayer then
+    helperIcon:SetText('H')
+    if isOnline then
+      helperIcon:SetColor(0.45, 0.95, 0.55, 1)
+      helperIcon:SetAlpha(1)
+    else
+      helperIcon:SetColor(0.60, 0.60, 0.60, 1)
+      helperIcon:SetAlpha(0.75)
+    end
+  elseif data.helperActive then
+    helperIcon:SetText('*')
+    if isOnline then
+      helperIcon:SetColor(0.45, 0.95, 0.55, 1)
+      helperIcon:SetAlpha(1)
+    else
+      helperIcon:SetColor(0.60, 0.60, 0.60, 1)
+      helperIcon:SetAlpha(0.75)
+    end
   else
+    helperIcon:SetText('*')
     helperIcon:SetColor(0.70, 0.70, 0.70, 1)
-    helperIcon:SetAlpha(0.65)
+    helperIcon:SetAlpha(isOnline and 0.65 or 0.35)
   end
   local farmerButton = GetControl(rowControl, 'FarmerButton')
   farmerButton:SetText(FormatDisplayName(data.displayName))
-  farmerButton:SetNormalFontColor(0.36, 0.80, 1.00, 1)
-  farmerButton:SetMouseOverFontColor(0.60, 0.90, 1.00, 1)
-  farmerButton:SetPressedFontColor(0.25, 0.65, 0.92, 1)
+  if isOnline then
+    farmerButton:SetNormalFontColor(0.36, 0.80, 1.00, 1)
+    farmerButton:SetMouseOverFontColor(0.60, 0.90, 1.00, 1)
+    farmerButton:SetPressedFontColor(0.25, 0.65, 0.92, 1)
+  else
+    farmerButton:SetNormalFontColor(0.62, 0.62, 0.62, 1)
+    farmerButton:SetMouseOverFontColor(0.74, 0.74, 0.74, 1)
+    farmerButton:SetPressedFontColor(0.52, 0.52, 0.52, 1)
+  end
   GetControl(rowControl, 'BestItemName'):SetText(data.bestItem.itemLink)
   local totalValueLabel = GetControl(rowControl, 'TotalValue')
   totalValueLabel:SetHorizontalAlignment(Settings:IsCompactMemberWindow() and TEXT_ALIGN_CENTER or TEXT_ALIGN_RIGHT)
+  if isOnline then
+    totalValueLabel:SetColor(1, 1, 1, 1)
+  else
+    totalValueLabel:SetColor(0.62, 0.62, 0.62, 1)
+  end
   totalValueLabel:SetText(FarmingPartyPlus.FormatNumber(data.totalValue) .. 'g')
 end
 
@@ -287,6 +333,7 @@ end
 function FarmingPartyPlusMemberList:Reset()
   members:DeleteAllMembers()
   self:AddAllGroupMembers()
+  self:RefreshOnlineStates()
 end
 
 function FarmingPartyPlusMemberList:GetAllGroupMembers()
@@ -319,17 +366,42 @@ function FarmingPartyPlusMemberList:PruneMissingMembers()
   self:RemoveMissingMembers(self:GetAllGroupMembers())
 end
 
-function FarmingPartyPlusMemberList:AddAllGroupMembers()
-  for name, displayName in pairs(self:GetAllGroupMembers()) do
+function FarmingPartyPlusMemberList:SyncGroupMembers(currentGroupMembers)
+  self:RemoveMissingMembers(currentGroupMembers)
+  for name, displayName in pairs(currentGroupMembers) do
     if not members:HasMember(name) then
       members:SetMember(name, members:NewMember(name, displayName))
+    else
+      members:UpdateDisplayName(name, displayName)
     end
   end
 end
 
+function FarmingPartyPlusMemberList:AddAllGroupMembers()
+  self:SyncGroupMembers(self:GetAllGroupMembers())
+end
+
+function FarmingPartyPlusMemberList:RefreshOnlineStates()
+  local onlineByMemberKey = {}
+  for i = 1, GetGroupSize() do
+    local unitTag = GetGroupUnitTagByIndex(i)
+    if unitTag ~= nil and DoesUnitExist(unitTag) then
+      local memberKey = zo_strformat(SI_UNIT_NAME, GetUnitName(unitTag))
+      if memberKey ~= '' then
+        onlineByMemberKey[memberKey] = IsUnitOnline(unitTag)
+      end
+    end
+  end
+
+  for _, memberKey in ipairs(members:GetKeys()) do
+    members:SetOnlineState(memberKey, onlineByMemberKey[memberKey] == true)
+  end
+end
+
 function FarmingPartyPlusMemberList:MarkHelperActive(characterName, displayName)
-  for memberKey, memberData in pairs(members:GetMembers()) do
-    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
+  if displayName ~= nil then
+    local memberKey = members:GetMemberKeyByDisplayName(displayName)
+    if memberKey ~= nil then
       members:SetHelperActive(memberKey, true)
       return
     end
@@ -342,8 +414,9 @@ function FarmingPartyPlusMemberList:MarkHelperActive(characterName, displayName)
   end
 
   self:AddAllGroupMembers()
-  for memberKey, memberData in pairs(members:GetMembers()) do
-    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
+  if displayName ~= nil then
+    local memberKey = members:GetMemberKeyByDisplayName(displayName)
+    if memberKey ~= nil then
       members:SetHelperActive(memberKey, true)
       return
     end

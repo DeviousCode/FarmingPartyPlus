@@ -2,6 +2,22 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [3.0.5] - 2026-06-03
+### Added
+- A `Stack Found` loot-history entry so stack-backed fishing corrections are visible in chat and the loot window instead of appearing as a silent scoreboard jump.
+- Clearer member-row status markers with a green `H` for the local `FarmingPartyPlus` host and retained helper `*` indicators for synced members.
+
+### Changed
+- Cleaned up member lookup and sync duplicate handling internals to rely on clearer helper functions and cached lookups without changing the tested fishing and gutting behavior.
+- Refined member presence rendering so active, helper-active, and offline rows are easier to distinguish during multi-character or multi-client event testing.
+
+### Fixed
+- Fixed several object constructors so initialization happens on the created instance instead of the shared class table.
+- Fixed member total rebuilds so zero-count item cleanup no longer mutates the same table while iterating it.
+- Fixed the loot-history window move handlers so dragging and releasing the window no longer throws nil-setting errors.
+- Fixed local and synced fish-stack tracking so pre-existing stack catches, stack replay, and processed-fish subtraction continue to reconcile correctly after the internal cleanup pass.
+- Fixed offline character rows so they gray correctly when another character from the same account joins the group.
+
 ## [3.0.4] - 2026-06-02
 ### Added
 - A craft-bag auto-add warning dialog for fishing sessions so hosts can disable the setting before `Fish` or `Perfect Roe` start bypassing tracked inventory flow.

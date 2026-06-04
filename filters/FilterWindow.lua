@@ -52,7 +52,7 @@ end
 
 function FarmingPartyPlusFilterWindow:New()
   local obj = ZO_Object.New(self)
-  self:Initialize()
+  obj:Initialize()
   return obj
 end
 

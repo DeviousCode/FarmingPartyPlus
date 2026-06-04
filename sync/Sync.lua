@@ -6,6 +6,8 @@ local DUPLICATE_WINDOW_SECONDS = 5
 local SYNC_KIND_DELTA = 0
 local SYNC_KIND_FISH_STACK_STATE = 1
 local SYNC_KIND_FISH_STACK_DELTA = 2
+local OBSERVED_SOURCE_NATIVE = 'native'
+local OBSERVED_SOURCE_SYNC = 'sync'
 
 FarmingPartyPlusSyncHost = ZO_Object:Subclass()
 
@@ -33,6 +35,34 @@ local function CleanupObservedEvents(now)
       observedEvents[key] = nil
     end
   end
+end
+
+local function GetObservedCountKeys(source)
+  if source == OBSERVED_SOURCE_SYNC then
+    return 'syncCount', 'nativeCount'
+  end
+  return 'nativeCount', 'syncCount'
+end
+
+local function GetOrCreateObservedEvent(displayName, itemName, quantity, lootType, now)
+  local eventKey = BuildEventKey(displayName, itemName, quantity, lootType)
+  local eventState = observedEvents[eventKey]
+  if eventState == nil then
+    eventState = {
+      nativeCount = 0,
+      syncCount = 0,
+      timestamp = now
+    }
+    observedEvents[eventKey] = eventState
+  end
+
+  eventState.timestamp = now
+  return eventKey, eventState
+end
+
+local function GetObservedEvent(displayName, itemName, quantity, lootType)
+  local eventKey = BuildEventKey(displayName, itemName, quantity, lootType)
+  return eventKey, observedEvents[eventKey]
 end
 
 function FarmingPartyPlusSyncHost:New()
@@ -129,19 +159,9 @@ function FarmingPartyPlusSyncHost:RecordObservedLoot(displayName, itemName, quan
 
   local now = GetTimeStamp()
   CleanupObservedEvents(now)
-  local eventKey = BuildEventKey(displayName, itemName, quantity, lootType)
-  local eventState = observedEvents[eventKey] or {
-    nativeCount = 0,
-    syncCount = 0,
-    timestamp = now
-  }
-  eventState.timestamp = now
-  if source == 'sync' then
-    eventState.syncCount = (eventState.syncCount or 0) + 1
-  else
-    eventState.nativeCount = (eventState.nativeCount or 0) + 1
-  end
-  observedEvents[eventKey] = eventState
+  local _, eventState = GetOrCreateObservedEvent(displayName, itemName, quantity, lootType, now)
+  local observedCountKey = GetObservedCountKeys(source)
+  eventState[observedCountKey] = (eventState[observedCountKey] or 0) + 1
 end
 
 function FarmingPartyPlusSyncHost:ConsumeDuplicate(displayName, itemName, quantity, lootType, source)
@@ -151,13 +171,12 @@ function FarmingPartyPlusSyncHost:ConsumeDuplicate(displayName, itemName, quanti
 
   local now = GetTimeStamp()
   CleanupObservedEvents(now)
-  local eventKey = BuildEventKey(displayName, itemName, quantity, lootType)
-  local eventState = observedEvents[eventKey]
+  local eventKey, eventState = GetObservedEvent(displayName, itemName, quantity, lootType)
   if eventState == nil then
     return false
   end
 
-  local opposingKey = source == 'sync' and 'nativeCount' or 'syncCount'
+  local _, opposingKey = GetObservedCountKeys(source)
   local remainingCount = eventState[opposingKey] or 0
   if remainingCount <= 0 then
     return false

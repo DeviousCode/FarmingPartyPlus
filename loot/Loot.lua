@@ -24,6 +24,7 @@ local Logger
 local Settings
 local Sync
 local trackedLocalFishSlots = {}
+local trackedLocalFishSlotKeysByItemName = {}
 local trackedSyncedFishSlots = {}
 local recentLocalGuttingOutputs = {}
 local AUTO_ADD_WARNING_DIALOG_NAME = 'FarmingPartyPlusCraftBagWarningDialog'
@@ -33,6 +34,32 @@ local SYNC_KIND_FISH_STACK_DELTA = 2
 
 local function BuildBagSlotKey(bagId, slotIndex)
   return string.format('%d:%d', bagId, slotIndex)
+end
+
+local function AddIndexedSlotKey(indexTable, itemName, slotKey)
+  if itemName == nil or itemName == '' then
+    return
+  end
+  local slotKeys = indexTable[itemName]
+  if slotKeys == nil then
+    slotKeys = {}
+    indexTable[itemName] = slotKeys
+  end
+  slotKeys[slotKey] = true
+end
+
+local function RemoveIndexedSlotKey(indexTable, itemName, slotKey)
+  if itemName == nil or itemName == '' then
+    return
+  end
+  local slotKeys = indexTable[itemName]
+  if slotKeys == nil then
+    return
+  end
+  slotKeys[slotKey] = nil
+  if next(slotKeys) == nil then
+    indexTable[itemName] = nil
+  end
 end
 
 local function IsBackpackSlot(bagId)
@@ -97,6 +124,7 @@ end
 
 function FarmingPartyPlusLoot:ClearSessionState()
   ZO_ClearTable(trackedLocalFishSlots)
+  ZO_ClearTable(trackedLocalFishSlotKeysByItemName)
   ZO_ClearTable(trackedSyncedFishSlots)
   ZO_ClearTable(recentLocalGuttingOutputs)
   self.hasShownCraftBagAutoAddWarning = false
@@ -179,15 +207,14 @@ local function FindMemberKey(looterName, lootedByPlayer)
   end
 
   if looterName ~= nil and looterName ~= '' then
+    local indexedMemberKey = Members:GetMemberKeyByDisplayName(looterName)
+    if indexedMemberKey ~= nil then
+      return indexedMemberKey
+    end
+
     local normalizedName = zo_strformat(SI_UNIT_NAME, looterName)
     if Members:HasMember(normalizedName) then
       return normalizedName
-    end
-
-    for memberKey, memberData in pairs(Members:GetMembers()) do
-      if memberData.displayName == looterName or memberData.displayName == UndecorateDisplayName(looterName) then
-        return memberKey
-      end
     end
   end
 
@@ -200,28 +227,20 @@ local function GetMember(looterName, lootedByPlayer)
     return memberKey, Members:GetMember(memberKey)
   end
 
-  MemberList:AddAllGroupMembers()
+  MemberList:SyncGroupMembers(MemberList:GetAllGroupMembers())
   memberKey = FindMemberKey(looterName, lootedByPlayer)
   if memberKey ~= nil then
     return memberKey, Members:GetMember(memberKey)
-  end
-
-  if Members:HasMember(looterName) then
-    return looterName, Members:GetMember(looterName)
-  end
-
-  local playerName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
-  if Members:HasMember(playerName) then
-    return playerName, Members:GetMember(playerName)
   end
 
   return nil, nil
 end
 
 local function GetSyncedMember(characterName, displayName)
-  for memberKey, memberData in pairs(Members:GetMembers()) do
-    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
-      return memberKey, memberData
+  if displayName ~= nil then
+    local displayNameMemberKey = Members:GetMemberKeyByDisplayName(displayName)
+    if displayNameMemberKey ~= nil then
+      return displayNameMemberKey, Members:GetMember(displayNameMemberKey)
     end
   end
 
@@ -230,10 +249,11 @@ local function GetSyncedMember(characterName, displayName)
     return normalizedCharacterName, Members:GetMember(normalizedCharacterName)
   end
 
-  MemberList:AddAllGroupMembers()
-  for memberKey, memberData in pairs(Members:GetMembers()) do
-    if displayName ~= nil and (memberData.displayName == displayName or memberData.displayName == UndecorateDisplayName(displayName)) then
-      return memberKey, memberData
+  MemberList:SyncGroupMembers(MemberList:GetAllGroupMembers())
+  if displayName ~= nil then
+    local displayNameMemberKey = Members:GetMemberKeyByDisplayName(displayName)
+    if displayNameMemberKey ~= nil then
+      return displayNameMemberKey, Members:GetMember(displayNameMemberKey)
     end
   end
 
@@ -242,6 +262,34 @@ local function GetSyncedMember(characterName, displayName)
   end
 
   return nil, nil
+end
+
+local function ShouldSuppressNativeLoot(displayName, itemLink, quantity, lootType)
+  if Sync == nil or Sync.ConsumeDuplicate == nil then
+    return false
+  end
+  return Sync:ConsumeDuplicate(displayName, GetItemLinkName(itemLink), quantity, lootType, 'native')
+end
+
+local function RecordNativeLoot(displayName, itemLink, quantity, lootType)
+  if Sync == nil or Sync.RecordObservedLoot == nil then
+    return
+  end
+  Sync:RecordObservedLoot(displayName, GetItemLinkName(itemLink), quantity, lootType, 'native')
+end
+
+local function ResolveSyncedTrackedItem(data)
+  local itemLink = data.itemLink
+  local itemName = data.itemName
+  local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
+  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or (data.itemValue or 0)
+  return trackedItem, resolvedItemValue
+end
+
+local function LogSyncedLoot(displayName, trackedItem, quantity, itemValue, lootType)
+  local absoluteQuantity = math.abs(quantity)
+  local totalValue = itemValue * absoluteQuantity
+  Logger:LogLootItem(displayName, false, trackedItem, quantity, totalValue, lootType or 0)
 end
 
 function FarmingPartyPlusLoot:PassesBaseExclusions(itemLink)
@@ -336,49 +384,67 @@ function FarmingPartyPlusLoot:RememberLocalFishSlot(bagId, slotIndex)
     return
   end
 
+  local slotKey = BuildBagSlotKey(bagId, slotIndex)
+  local existingTrackedSlot = trackedLocalFishSlots[slotKey]
   local itemLink = GetItemLink(bagId, slotIndex)
   if itemLink == nil or itemLink == '' or not IsGuttableFishItem(itemLink) then
-    trackedLocalFishSlots[BuildBagSlotKey(bagId, slotIndex)] = nil
+    if existingTrackedSlot ~= nil then
+      RemoveIndexedSlotKey(trackedLocalFishSlotKeysByItemName, existingTrackedSlot.itemName, slotKey)
+      trackedLocalFishSlots[slotKey] = nil
+    end
     return
   end
 
-  local slotKey = BuildBagSlotKey(bagId, slotIndex)
-  local existingTrackedSlot = trackedLocalFishSlots[slotKey]
   local normalizedItemName = NormalizeItemName(itemLink)
   local preservedClaimedCount = 0
-  if existingTrackedSlot ~= nil and NormalizeItemName(existingTrackedSlot.itemLink or '') == normalizedItemName then
+  if existingTrackedSlot ~= nil and existingTrackedSlot.itemName == normalizedItemName then
     preservedClaimedCount = existingTrackedSlot.claimedCount or 0
+  elseif existingTrackedSlot ~= nil then
+    RemoveIndexedSlotKey(trackedLocalFishSlotKeysByItemName, existingTrackedSlot.itemName, slotKey)
   end
 
   trackedLocalFishSlots[slotKey] = {
     bagId = bagId,
     slotIndex = slotIndex,
+    itemName = normalizedItemName,
     itemLink = itemLink,
     itemValue = GetItemPrice(itemLink),
     stackCount = GetSlotStackSize(bagId, slotIndex),
     claimedCount = preservedClaimedCount
   }
+  AddIndexedSlotKey(trackedLocalFishSlotKeysByItemName, normalizedItemName, slotKey)
+end
+
+function FarmingPartyPlusLoot:CaptureLocalFishSlotsByName(normalizedItemName)
+  local capturedSlotKeys = {}
+  local bagSize = GetBagSize(BAG_BACKPACK)
+  for slotIndex = 0, bagSize - 1 do
+    local slotItemLink = GetItemLink(BAG_BACKPACK, slotIndex)
+    if slotItemLink ~= nil and slotItemLink ~= '' and NormalizeItemName(slotItemLink) == normalizedItemName and IsGuttableFishItem(slotItemLink) then
+      self:RememberLocalFishSlot(BAG_BACKPACK, slotIndex)
+      capturedSlotKeys[#capturedSlotKeys + 1] = BuildBagSlotKey(BAG_BACKPACK, slotIndex)
+    end
+  end
+  return capturedSlotKeys
 end
 
 function FarmingPartyPlusLoot:ClaimLocalFishSlotForSession(normalizedItemName, caughtQuantity)
   zo_callLater(function()
     local playerName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
     local claimedCatchQuantity = tonumber(caughtQuantity) or 0
-    for slotIndex = 0, GetBagSize(BAG_BACKPACK) do
-      local slotItemLink = GetItemLink(BAG_BACKPACK, slotIndex)
-      if slotItemLink ~= nil and slotItemLink ~= '' and NormalizeItemName(slotItemLink) == normalizedItemName and IsGuttableFishItem(slotItemLink) then
-        local slotKey = BuildBagSlotKey(BAG_BACKPACK, slotIndex)
-        local currentStackCount = GetSlotStackSize(BAG_BACKPACK, slotIndex)
-        local trackedSlot = trackedLocalFishSlots[slotKey]
-        local previouslyClaimedCount = trackedSlot ~= nil and (trackedSlot.claimedCount or 0) or 0
+    local slotKeys = self:CaptureLocalFishSlotsByName(normalizedItemName)
+    for _, slotKey in ipairs(slotKeys) do
+      local trackedSlot = trackedLocalFishSlots[slotKey]
+      if trackedSlot ~= nil then
+        local currentStackCount = trackedSlot.stackCount or 0
+        local previouslyClaimedCount = trackedSlot.claimedCount or 0
         local claimDelta = currentStackCount - previouslyClaimedCount - claimedCatchQuantity
 
-        self:RememberLocalFishSlot(BAG_BACKPACK, slotIndex)
         if claimDelta > 0 and Members:HasMember(playerName) then
-          local itemValue = GetItemPrice(slotItemLink)
-          self:AddNewLootedItem(playerName, slotItemLink, itemValue, claimDelta)
+          self:AddNewLootedItem(playerName, trackedSlot.itemLink, trackedSlot.itemValue, claimDelta)
+          Logger:LogStackFound(GetDisplayName('player'), true, trackedSlot.itemLink, claimDelta, trackedSlot.itemValue * claimDelta, LOOT_TYPE_ITEM)
         end
-        trackedLocalFishSlots[slotKey].claimedCount = currentStackCount
+        trackedSlot.claimedCount = currentStackCount
       end
     end
   end, 0)
@@ -415,13 +481,11 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
   end
 
   local observedDisplayName = looterMember.displayName or memberKey
-  if not lootedByPlayer and Sync ~= nil and Sync.ConsumeDuplicate ~= nil and Sync:ConsumeDuplicate(observedDisplayName, GetItemLinkName(itemLink), quantity, lootType, 'native') then
+  if not lootedByPlayer and ShouldSuppressNativeLoot(observedDisplayName, itemLink, quantity, lootType) then
     return
   end
 
-  if Sync ~= nil then
-    Sync:RecordObservedLoot(observedDisplayName, GetItemLinkName(itemLink), quantity, lootType, 'native')
-  end
+  RecordNativeLoot(observedDisplayName, itemLink, quantity, lootType)
   self:AddNewLootedItem(memberKey, itemLink, itemValue, quantity)
   Logger:LogLootItem(looterMember.displayName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
 
@@ -443,12 +507,8 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
     return
   end
 
-  local itemName = data.itemName
-  local itemLink = data.itemLink
-  local itemValue = data.itemValue or 0
   local quantity = tonumber(data.quantity) or 1
-  local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
-  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or itemValue
+  local trackedItem, resolvedItemValue = ResolveSyncedTrackedItem(data)
   local syncKind = tonumber(data.syncKind) or SYNC_KIND_DELTA
 
   if quantity == 0 then
@@ -461,16 +521,16 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
   elseif syncKind == SYNC_KIND_FISH_STACK_DELTA then
     self:AdjustLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
     self:RememberSyncedFishSlot(memberKey, trackedItem, resolvedItemValue, data)
-    Logger:LogLootItem(looterMember.displayName, false, trackedItem, quantity, resolvedItemValue * math.abs(quantity), data.lootType or 0)
+    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType)
     return
   end
 
   if quantity > 0 then
     self:AddNewLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
-    Logger:LogLootItem(looterMember.displayName, false, trackedItem, quantity, resolvedItemValue * quantity, data.lootType or 0)
+    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType)
   else
     self:AdjustLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
-    Logger:LogLootItem(looterMember.displayName, false, trackedItem, quantity, resolvedItemValue * math.abs(quantity), data.lootType or 0)
+    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType)
   end
 end
 
@@ -525,6 +585,10 @@ function FarmingPartyPlusLoot:ApplySyncedFishStackState(memberKey, itemLink, ite
 
   if correctionDelta > 0 then
     self:AddNewLootedItem(memberKey, itemLink, itemValue, correctionDelta)
+    local looterMember = Members:GetMember(memberKey)
+    if looterMember ~= nil then
+      Logger:LogStackFound(looterMember.displayName, false, itemLink, correctionDelta, itemValue * correctionDelta, data.lootType or LOOT_TYPE_ITEM)
+    end
   elseif correctionDelta < 0 then
     self:AdjustLootedItem(memberKey, itemLink, itemValue, correctionDelta)
   end
@@ -572,6 +636,7 @@ function FarmingPartyPlusLoot:OnInventorySlotUpdated(eventCode, bagId, slotIndex
     trackedSlot.stackCount = math.max((trackedSlot.stackCount or 0) - quantityRemoved, 0)
     trackedSlot.claimedCount = math.max((trackedSlot.claimedCount or 0) - quantityRemoved, 0)
     if trackedSlot.claimedCount == 0 then
+      RemoveIndexedSlotKey(trackedLocalFishSlotKeysByItemName, trackedSlot.itemName, slotKey)
       trackedLocalFishSlots[slotKey] = nil
     end
   end

@@ -15,6 +15,7 @@ It is designed for players who want to run organized farming groups without clut
 - Logs loot to chat and the loot window
 - Supports optional helper sync through a separate addon
 - Supports fishing-session gutting flows, including processed fish subtraction and `Fish` / `Perfect Roe` outputs
+- Shows explicit `Stack Found` history lines when a later catch causes an already-held common-fish stack to be claimed into the session total
 - Supports saved whitelist profiles and recipe value filtering
 
 ## Main Features
@@ -109,6 +110,7 @@ While whitelist mode is enabled, `Minimum Item Quality` is not used and is disab
 It can:
 
 - count caught fish
+- show when a previously held stack was folded into the session total
 - subtract processed fish from the scoreboard
 - count `Fish`
 - count `Perfect Roe`
@@ -117,6 +119,12 @@ It can:
 This makes it better suited for guild fishing events where processed items are part of the total payout picture.
 
 It also now supports stack-aware fishing sync recovery for other `FarmingPartyPlus` clients, so if another client resets and you later catch another fish into the same tracked stack, the receiver can rebuild the correct stack-backed total instead of only seeing the new `+1`.
+
+The member scoreboard also distinguishes live state more clearly during events:
+
+- a green `H` marks the local `FarmingPartyPlus` host row
+- helper-active members keep a `*`
+- offline grouped characters gray out instead of looking fully active
 
 ## Installation
 
