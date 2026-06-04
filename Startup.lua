@@ -54,6 +54,7 @@ function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
     return
   end
 
+  ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_TRACKING_PLUS', 'Toggle FPP Loot Tracking')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_SCOREBOARD_PLUS', 'Toggle FPP Scoreboard')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_COMPACT_SCOREBOARD_PLUS', 'Toggle FPP Compact Scoreboard')
   ZO_CreateStringId('SI_BINDING_NAME_TOGGLE_ITEM_BREAKDOWN_PLUS', 'Toggle FPP Item Breakdown')
@@ -112,6 +113,28 @@ function FarmingPartyPlus:Reset()
   d('[Farming Party Plus]: Tracking data has been reset')
 end
 
+function FarmingPartyPlus:StartTracking()
+  if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.DISABLED then
+    self.Modules.MemberList:AddEventHandlers()
+    self.Modules.Loot:AddEventHandlers()
+  end
+  d('[Farming Party Plus]: Tracking is on')
+end
+
+function FarmingPartyPlus:StopTracking()
+  self.Modules.MemberList:RemoveEventHandlers()
+  self.Modules.Loot:RemoveEventHandlers()
+  d('[Farming Party Plus]: Tracking is off')
+end
+
+function FarmingPartyPlus:ToggleTracking()
+  if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
+    self:StopTracking()
+  else
+    self:StartTracking()
+  end
+end
+
 function FarmingPartyPlus:ConsoleCommands()
   local function HandleMainCommand(param)
     local trimmedParam = string.gsub(param or '', '%s+$', ''):lower()
@@ -122,15 +145,11 @@ function FarmingPartyPlus:ConsoleCommands()
     elseif trimmedParam == 'reset' then
       self:Reset()
     elseif trimmedParam == 'start' then
-      if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.DISABLED then
-        self.Modules.MemberList:AddEventHandlers()
-        self.Modules.Loot:AddEventHandlers()
-      end
-      d('[Farming Party Plus]: Tracking is on')
+      self:StartTracking()
     elseif trimmedParam == 'stop' or trimmedParam == 'pause' then
-      self.Modules.MemberList:RemoveEventHandlers()
-      self.Modules.Loot:RemoveEventHandlers()
-      d('[Farming Party Plus]: Tracking is off')
+      self:StopTracking()
+    elseif trimmedParam == 'toggle' then
+      self:ToggleTracking()
     elseif trimmedParam == 'status' then
       if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
         d('[Farming Party Plus]: Tracking is on')
@@ -180,6 +199,7 @@ function FarmingPartyPlus:ConsoleCommands()
     d('/fpp reset            Resets all loot data.')
     d('/fpp [start]          Start loot tracking.')
     d('/fpp [stop]           Stop loot tracking.')
+    d('/fpp toggle           Toggle loot tracking on or off.')
     d('/fpp [status]         Show loot tracking status.')
     d('/fpp update           Sync tracked members with current group.')
     d('/fpp filters          Open the node whitelist window.')

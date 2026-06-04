@@ -6,6 +6,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 ### Added
 - A `Stack Found` loot-history entry so stack-backed fishing corrections are visible in chat and the loot window instead of appearing as a silent scoreboard jump.
 - Clearer member-row status markers with a green `H` for the local `FarmingPartyPlus` host and retained helper `*` indicators for synced members.
+- A dedicated keybind to toggle loot tracking on and off, plus a matching `/fpp toggle` command.
 
 ### Changed
 - Cleaned up member lookup and sync duplicate handling internals to rely on clearer helper functions and cached lookups without changing the tested fishing and gutting behavior.
