@@ -20,6 +20,17 @@ local function NormalizeText(text)
   return zo_strlower(zo_strformat('<<z:1>>', text))
 end
 
+local function GetNormalizedItemNameFromLink(itemLink)
+  if itemLink == nil or itemLink == '' then
+    return ''
+  end
+  local itemName = GetItemLinkName(itemLink)
+  if itemName == nil or itemName == '' then
+    itemName = zo_strformat('<<t:1>>', itemLink)
+  end
+  return zo_strlower(zo_strformat('<<z:1>>', itemName))
+end
+
 local function BuildEventKey(displayName, itemName, quantity, lootType)
   return table.concat({
     NormalizeText(displayName),
@@ -93,9 +104,7 @@ end
 
 function FarmingPartyPlusSyncHost:DeclareProtocol(handler, lib, protocolId, protocolName)
   local protocol = handler:DeclareProtocol(protocolId, protocolName)
-  protocol:AddField(lib.CreateStringField('senderCharacterName', { maxLength = 64 }))
   protocol:AddField(lib.CreateStringField('senderDisplayName', { maxLength = 64 }))
-  protocol:AddField(lib.CreateStringField('itemName', { maxLength = 128 }))
   protocol:AddField(lib.CreateStringField('itemLink', { maxLength = 255 }))
   protocol:AddField(lib.CreateNumericField('quantity', { minValue = -1000, maxValue = 1000 }))
   protocol:AddField(lib.CreateNumericField('itemType', { numBits = 32 }))
@@ -134,9 +143,7 @@ function FarmingPartyPlusSyncHost:SendMeshDelta(data)
   end
 
   self.meshProtocol:Send({
-    senderCharacterName = data.senderCharacterName,
     senderDisplayName = data.senderDisplayName,
-    itemName = data.itemName,
     itemLink = data.itemLink,
     quantity = data.quantity,
     itemType = data.itemType,
@@ -196,25 +203,37 @@ function FarmingPartyPlusSyncHost:OnData(unitTag, data)
   if not self:IsEnabled() then
     return
   end
-  if data == nil or data.senderDisplayName == nil then
+  if data == nil then
     return
   end
 
+  local senderDisplayName = data.senderDisplayName
+  if senderDisplayName == nil or senderDisplayName == '' then
+    senderDisplayName = UndecorateDisplayName(GetUnitDisplayName(unitTag or ''))
+  end
+  if senderDisplayName == nil or senderDisplayName == '' then
+    return
+  end
+  local senderCharacterName = zo_strformat(SI_UNIT_NAME, GetUnitName(unitTag or ''))
+  local itemName = GetNormalizedItemNameFromLink(data.itemLink)
   local localDisplayName = UndecorateDisplayName(GetDisplayName('player'))
-  if data.senderDisplayName == localDisplayName then
+  if senderDisplayName == localDisplayName then
     return
   end
-  if self:ConsumeDuplicate(data.senderDisplayName, data.itemName, data.quantity, data.lootType, 'sync') then
+  if self:ConsumeDuplicate(senderDisplayName, itemName, data.quantity, data.lootType, 'sync') then
     return
   end
 
-  self:RecordObservedLoot(data.senderDisplayName, data.itemName, data.quantity, data.lootType, 'sync')
+  self:RecordObservedLoot(senderDisplayName, itemName, data.quantity, data.lootType, 'sync')
 
   local memberList = FarmingPartyPlus.Modules.MemberList
   if memberList ~= nil and memberList.MarkHelperActive ~= nil then
-    memberList:MarkHelperActive(data.senderCharacterName, data.senderDisplayName)
+    memberList:MarkHelperActive(senderCharacterName, senderDisplayName)
   end
 
+  data.senderCharacterName = senderCharacterName
+  data.senderDisplayName = senderDisplayName
+  data.itemName = itemName
   local lootModule = FarmingPartyPlus.Modules.Loot
   if lootModule ~= nil then
     lootModule:OnSyncedLootReceived(data, unitTag)

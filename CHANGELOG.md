@@ -2,6 +2,13 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [3.0.6] - 2026-06-04
+### Changed
+- Sync receiver handling now derives item names locally from `itemLink` and keeps only the display-name identity field on the wire, reducing redundant helper payload data without changing the tested fishing and gutting flow.
+
+### Fixed
+- Restored helper recognition after the sync payload cleanup by continuing to accept sender display-name identity for helper markers, gutting updates, and duplicate handling.
+
 ## [3.0.5] - 2026-06-03
 ### Added
 - A `Stack Found` loot-history entry so stack-backed fishing corrections are visible in chat and the loot window instead of appearing as a silent scoreboard jump.
@@ -11,6 +18,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 ### Changed
 - Cleaned up member lookup and sync duplicate handling internals to rely on clearer helper functions and cached lookups without changing the tested fishing and gutting behavior.
 - Refined member presence rendering so active, helper-active, and offline rows are easier to distinguish during multi-character or multi-client event testing.
+- Sync receiver handling now derives sender identity and synced item names from local API data, keeping the on-wire `FarmingPartyPlusSync` payload leaner and more addon-friendly.
 
 ### Fixed
 - Fixed several object constructors so initialization happens on the created instance instead of the shared class table.
@@ -90,6 +98,12 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Fixed sync host object initialization so the receiver module initializes on the created instance.
 
 ## [3.0.0] - 2026-06-01
+### Project Note
+
+`FarmingPartyPlus` began as a fork of the original `Farming Party` addon, which was previously versioned as `2.15.0`.
+
+This release marks the beginning of the `FarmingPartyPlus` version line. Changes listed here reflect work done specifically for `FarmingPartyPlus`.
+
 ### Added
 - New `FarmingPartyPlus` addon identity, folder, saved variables, slash commands, and bindings so it can coexist with the original `Farming Party`.
 - Material whitelist mode designed for organized farming groups that want to count only selected items.
