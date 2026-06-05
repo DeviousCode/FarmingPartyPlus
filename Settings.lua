@@ -23,7 +23,8 @@ for index, label in ipairs(qualityChoiceLabels) do
   qualityValueByLabel[label] = qualityChoiceValues[index]
 end
 
-local ACCOUNT_WIDE_SETTINGS_VERSION = 2
+local ACCOUNT_WIDE_SETTINGS_VERSION = 3
+local WORLD_NAME = GetWorldName()
 
 local function ColoredHeader(text, color)
   return string.format('|c%s%s|r', color, text)
@@ -92,7 +93,8 @@ end
 function FarmingPartyPlusSettings:Initialize()
   local defaults = {
     storage = {
-      migratedFromCharacter = false
+      migratedFromCharacter = false,
+      migratedFromLegacyScopes = false
     },
     excludeFromTracking = {
       gear = false,
@@ -152,22 +154,41 @@ function FarmingPartyPlusSettings:Initialize()
   }
 
   local legacyCharacterSettings = ZO_SavedVars:New('FarmingPartyPlusSettings_db', 1, nil, defaults)
-  self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, nil, defaults)
+  local legacyAccountWideSettings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, nil, defaults)
+  self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, WORLD_NAME, defaults)
 
   if self.settings.storage == nil then
     self.settings.storage = {
-      migratedFromCharacter = false
+      migratedFromCharacter = false,
+      migratedFromLegacyScopes = false
     }
   end
 
-  if self.settings.storage.migratedFromCharacter ~= true and TableHasMeaningfulData(legacyCharacterSettings, defaults) then
+  if self.settings.storage.migratedFromLegacyScopes ~= true then
+    local migrationSource = nil
+    if TableHasMeaningfulData(legacyAccountWideSettings, defaults) then
+      migrationSource = legacyAccountWideSettings
+    elseif TableHasMeaningfulData(legacyCharacterSettings, defaults) then
+      migrationSource = legacyCharacterSettings
+    end
+
+    if migrationSource ~= nil then
+      local migratedSettings = CopyTable(migrationSource)
+      migratedSettings.storage = migratedSettings.storage or {}
+      migratedSettings.storage.migratedFromCharacter = true
+      migratedSettings.storage.migratedFromLegacyScopes = true
+      self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, WORLD_NAME, migratedSettings)
+    end
+  elseif self.settings.storage.migratedFromCharacter ~= true and TableHasMeaningfulData(legacyCharacterSettings, defaults) then
     local migratedSettings = CopyTable(legacyCharacterSettings)
     migratedSettings.storage = migratedSettings.storage or {}
     migratedSettings.storage.migratedFromCharacter = true
-    self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, nil, migratedSettings)
+    migratedSettings.storage.migratedFromLegacyScopes = true
+    self.settings = ZO_SavedVars:NewAccountWide('FarmingPartyPlusSettings_db', ACCOUNT_WIDE_SETTINGS_VERSION, WORLD_NAME, migratedSettings)
   end
 
   self.settings.storage.migratedFromCharacter = true
+  self.settings.storage.migratedFromLegacyScopes = true
   self:NormalizeWhitelistSettings()
   self:NormalizeWindowSettings()
 

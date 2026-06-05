@@ -37,6 +37,21 @@ local function GetNormalizedItemNameFromLink(itemLink)
   return zo_strlower(zo_strformat('<<z:1>>', itemName))
 end
 
+local function GetItemIdFromLink(itemLink)
+  if itemLink == nil or itemLink == '' then
+    return 0
+  end
+  return tonumber(string.match(itemLink, '|H%d:item:(%d+):')) or 0
+end
+
+local function BuildCanonicalItemLink(itemId)
+  itemId = tonumber(itemId) or 0
+  if itemId <= 0 then
+    return ''
+  end
+  return string.format('|H0:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h', itemId)
+end
+
 local function BuildEventKey(displayName, itemName, quantity, lootType)
   return table.concat({
     NormalizeText(displayName),
@@ -540,13 +555,9 @@ end
 function FarmingPartyPlusSyncHost:DeclareProtocol(handler, lib, protocolId, protocolName)
   local protocol = handler:DeclareProtocol(protocolId, protocolName)
   protocol:AddField(lib.CreateStringField('senderDisplayName', { maxLength = 64 }))
-  protocol:AddField(lib.CreateStringField('itemLink', { maxLength = 255 }))
+  protocol:AddField(lib.CreateNumericField('itemId', { numBits = 32 }))
   protocol:AddField(lib.CreateNumericField('quantity', { minValue = -1000, maxValue = 1000 }))
-  protocol:AddField(lib.CreateNumericField('itemType', { numBits = 32 }))
-  protocol:AddField(lib.CreateNumericField('equipType', { numBits = 16 }))
-  protocol:AddField(lib.CreateNumericField('quality', { numBits = 8 }))
   protocol:AddField(lib.CreateNumericField('lootType', { numBits = 16 }))
-  protocol:AddField(lib.CreateNumericField('itemValue', { numBits = 32 }))
   protocol:AddField(lib.CreateNumericField('syncKind', { numBits = 8 }))
   protocol:AddField(lib.CreateNumericField('bagId', { numBits = 8 }))
   protocol:AddField(lib.CreateNumericField('slotIndex', { numBits = 16 }))
@@ -585,13 +596,9 @@ function FarmingPartyPlusSyncHost:SendMeshDelta(data)
 
   self.meshProtocol:Send({
     senderDisplayName = data.senderDisplayName,
-    itemLink = data.itemLink,
+    itemId = data.itemId or GetItemIdFromLink(data.itemLink),
     quantity = data.quantity,
-    itemType = data.itemType,
-    equipType = data.equipType,
-    quality = data.quality,
     lootType = data.lootType,
-    itemValue = data.itemValue,
     syncKind = data.syncKind or SYNC_KIND_DELTA,
     bagId = data.bagId or 0,
     slotIndex = data.slotIndex or 0,
@@ -656,6 +663,7 @@ function FarmingPartyPlusSyncHost:OnData(unitTag, data)
     return
   end
   local senderCharacterName = zo_strformat(SI_UNIT_NAME, GetUnitName(unitTag or ''))
+  data.itemLink = BuildCanonicalItemLink(data.itemId)
   local itemName = GetNormalizedItemNameFromLink(data.itemLink)
   local localDisplayName = UndecorateDisplayName(GetDisplayName('player'))
   if senderDisplayName == localDisplayName then

@@ -8,6 +8,11 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 
 ### Changed
 - The recommended install flow now treats `FarmingPartyPlus` as the normal one-addon path for both sending and receiving fishing/gutting sync.
+- Sync payloads now send compact numeric `itemId` values instead of full item links, with the receiver rebuilding link metadata locally before applying whitelist, pricing, and history logic.
+- Account-wide settings and saved member state are now separated by `GetWorldName()` so NA, EU, and other server families stop sharing the same persisted addon data.
+
+### Fixed
+- Synced loot filtering now uses the same local item-link rules as ordinary loot, so the lighter `itemId` payload still respects whitelist, recipe, pricing, and exclusion behavior consistently.
 
 ## [3.0.6] - 2026-06-04
 ### Changed

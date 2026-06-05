@@ -21,11 +21,24 @@ local COMPACT_LAYOUT = {
   totalRowOffset = 10,
   totalRowWidth = 116
 }
+local WORLD_NAME = GetWorldName()
 
 local listContainer
 local members = {}
 local saveData = {}
 local Settings
+
+local function CopyTable(source)
+  if type(source) ~= 'table' then
+    return source
+  end
+
+  local copy = {}
+  for key, value in pairs(source) do
+    copy[key] = CopyTable(value)
+  end
+  return copy
+end
 
 local function FormatDisplayName(displayName)
   if displayName == nil or displayName == '' then
@@ -46,7 +59,16 @@ function FarmingPartyPlusMemberList:New()
 end
 
 function FarmingPartyPlusMemberList:Initialize()
-  saveData = ZO_SavedVars:New('FarmingPartyPlusMemberList_db', RELEASE_COUNT, nil, { members = {} })
+  local defaults = { members = {} }
+  local legacySaveData = ZO_SavedVars:New('FarmingPartyPlusMemberList_db', RELEASE_COUNT, nil, defaults)
+  saveData = ZO_SavedVars:New('FarmingPartyPlusMemberList_db', RELEASE_COUNT, WORLD_NAME, defaults)
+  if type(saveData.members) ~= 'table' then
+    saveData.members = {}
+  end
+  if next(saveData.members) == nil and type(legacySaveData.members) == 'table' and next(legacySaveData.members) ~= nil then
+    saveData.members = CopyTable(legacySaveData.members)
+  end
+
   FarmingPartyPlus.Modules.Members = FarmingPartyPlusMembers:New(saveData)
   members = FarmingPartyPlus.Modules.Members
 

@@ -15,6 +15,14 @@ local function NormalizeItemName(itemLink)
   return zo_strlower(zo_strformat('<<z:1>>', itemName))
 end
 
+local function BuildCanonicalItemLink(itemId)
+  itemId = tonumber(itemId) or 0
+  if itemId <= 0 then
+    return ''
+  end
+  return string.format('|H0:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h', itemId)
+end
+
 FarmingPartyPlusLoot = ZO_Object:Subclass()
 
 local NOT_EQUIPPABLE = 0
@@ -280,9 +288,17 @@ end
 
 local function ResolveSyncedTrackedItem(data)
   local itemLink = data.itemLink
+  if (itemLink == nil or itemLink == '') and data.itemId ~= nil then
+    itemLink = BuildCanonicalItemLink(data.itemId)
+    data.itemLink = itemLink
+  end
   local itemName = data.itemName
+  if (itemName == nil or itemName == '') and itemLink ~= nil and itemLink ~= '' then
+    itemName = NormalizeItemName(itemLink)
+    data.itemName = itemName
+  end
   local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
-  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or (data.itemValue or 0)
+  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or 0
   return trackedItem, resolvedItemValue
 end
 
@@ -306,14 +322,13 @@ function FarmingPartyPlusLoot:PassesBaseExclusions(itemLink)
   return true
 end
 
-function FarmingPartyPlusLoot:PassesBaseExclusionsForData(itemType, equipType)
-  if equipType ~= NOT_EQUIPPABLE and not Settings:TrackGearLoot() then
-    return false
+local function GetSyncedItemLink(data)
+  local itemLink = data.itemLink
+  if (itemLink == nil or itemLink == '') and data.itemId ~= nil then
+    itemLink = BuildCanonicalItemLink(data.itemId)
+    data.itemLink = itemLink
   end
-  if itemType == ITEMTYPE_RACIAL_STYLE_MOTIF and not Settings:TrackMotifLoot() then
-    return false
-  end
-  return true
+  return itemLink
 end
 
 function FarmingPartyPlusLoot:ShouldTrackByLegacyRules(itemLink)
@@ -362,21 +377,11 @@ function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
   if data.lootType == LOOT_TYPE_QUEST_ITEM then
     return false
   end
-  if not self:PassesBaseExclusionsForData(data.itemType, data.equipType) then
+  local itemLink = GetSyncedItemLink(data)
+  if itemLink == nil or itemLink == '' then
     return false
   end
-
-  if Settings:UseWhitelistMode() then
-    if IsRecipeItemType(data.itemType) and Settings:IsWhitelistRuleEnabled('__recipes_any__') then
-      return (tonumber(data.itemValue) or 0) >= Settings:MinimumRecipeValue()
-    end
-    if data.itemType == ITEMTYPE_FISH and Settings:IsWhitelistRuleEnabled('__fish_any__') then
-      return true
-    end
-    return Settings:IsWhitelistedItem(zo_strlower(zo_strformat('<<z:1>>', data.itemName or '')))
-  end
-
-  return (data.quality or 0) >= (tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH)
+  return self:ShouldTrackItem(itemLink, data.lootType)
 end
 
 function FarmingPartyPlusLoot:RememberLocalFishSlot(bagId, slotIndex)
