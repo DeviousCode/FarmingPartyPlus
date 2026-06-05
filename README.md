@@ -13,7 +13,7 @@ It is designed for players who want to run organized farming groups without clut
 - Lets you toggle exactly which materials count
 - Shows tracked loot in a scoreboard window and item breakdown window
 - Logs loot to chat and the loot window
-- Can send and receive its own fishing/gutting sync when `LibGroupBroadcast` is installed
+- Can send and receive its own built-in fishing/gutting sync when `LibGroupBroadcast` is installed
 - Supports fishing-session gutting flows, including processed fish subtraction and `Fish` / `Perfect Roe` outputs
 - Shows explicit `Stack Found` history lines when a later catch causes an already-held common-fish stack to be claimed into the session total
 - Supports saved whitelist profiles and recipe value filtering
@@ -144,13 +144,13 @@ Typical path:
 - `LibAsync`
 - `LibPrice`
 
-### Optional Sync Library
+### Fishing Sync Library
 
-If you want to use the optional sync path, install:
+If you want multi-client fishing/gutting sync, install:
 
 - `LibGroupBroadcast`
 
-`LibGroupBroadcast` is not required for normal `FarmingPartyPlus` use. It is only needed for the extra fishing/gutting sync path:
+`LibGroupBroadcast` is not required for normal `FarmingPartyPlus` use. It is only needed for the built-in fishing/gutting sync path:
 
 - processed fish subtraction
 - `Fish`
@@ -175,7 +175,6 @@ If you want to use the optional sync path, install:
 | `/fpp log` | Toggle the loot history window |
 | `/fpp whitelist on` | Enable whitelist mode |
 | `/fpp whitelist off` | Disable whitelist mode |
-| `/fpp sync` | Show sync receiver status |
 | `/fppc` | Output current scores to the chat input |
 | `/fpphelp` | Print command help |
 | `/fpploot` | Toggle the loot history window |
@@ -211,7 +210,7 @@ Use:
 
 ### Sync Indicators
 
-The members window also shows whether the host has observed sync traffic from a party member.
+The members window also shows whether your client has observed built-in fishing/gutting sync traffic from a party member.
 
 This helps confirm that another `FarmingPartyPlus` client is actually talking to the host during event testing.
 
@@ -219,7 +218,7 @@ This helps confirm that another `FarmingPartyPlus` client is actually talking to
 
 - Saved variables update on `/reloadui`, logout, or exit
 - Group loot tracking depends on what the ESO API exposes to the host client
-- Some actions are easier to see locally than remotely, which is why the optional sync path exists
+- Some actions are easier to see locally than remotely, which is why the built-in fishing/gutting sync path exists
 - Gear and motif filters still apply when whitelist mode is active
 - Loot history can be shown or hidden independently of chat logging through the keybind or loot-window commands
 - Fishing outputs can be affected by ESO `Auto-Add to Craft Bag`, so the addon warns when that setting would interfere with tracked fishing results

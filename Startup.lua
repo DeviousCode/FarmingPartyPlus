@@ -171,12 +171,6 @@ function FarmingPartyPlus:ConsoleCommands()
     elseif trimmedParam == 'compact off' then
       FarmingPartyPlus.Settings:ToggleCompactMemberWindow(false)
       d('[Farming Party Plus]: Compact scoreboard mode is off')
-    elseif trimmedParam == 'sync' then
-      if self.Modules.Sync ~= nil and self.Modules.Sync:IsEnabled() then
-        d('[Farming Party Plus]: Optional sync receiver is enabled')
-      else
-        d('[Farming Party Plus]: Optional sync receiver is disabled or LibGroupBroadcast is missing')
-      end
     elseif trimmedParam == 'whitelist on' then
       FarmingPartyPlus.Settings:SetWhitelistMode(true)
       d('[Farming Party Plus]: Whitelist mode is on')
@@ -205,7 +199,6 @@ function FarmingPartyPlus:ConsoleCommands()
     d('/fpp filters          Open the node whitelist window.')
     d('/fpp loot             Show or hide the loot history window.')
     d('/fpp compact          Toggle compact scoreboard mode.')
-    d('/fpp sync             Show optional sync receiver status.')
     d('/fpp whitelist on     Count only selected whitelist items.')
     d('/fpp whitelist off    Use the original quality-based filters.')
     d('/fppc                 Put score output into the chat box.')

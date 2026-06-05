@@ -15,14 +15,6 @@ local function NormalizeItemName(itemLink)
   return zo_strlower(zo_strformat('<<z:1>>', itemName))
 end
 
-local function BuildCanonicalItemLink(itemId)
-  itemId = tonumber(itemId) or 0
-  if itemId <= 0 then
-    return ''
-  end
-  return string.format('|H0:item:%d:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h', itemId)
-end
-
 FarmingPartyPlusLoot = ZO_Object:Subclass()
 
 local NOT_EQUIPPABLE = 0
@@ -31,6 +23,7 @@ local MemberList
 local Logger
 local Settings
 local Sync
+local knownFishingLinksByCode = {}
 local trackedLocalFishSlots = {}
 local trackedLocalFishSlotKeysByItemName = {}
 local trackedSyncedFishSlots = {}
@@ -39,6 +32,21 @@ local AUTO_ADD_WARNING_DIALOG_NAME = 'FarmingPartyPlusCraftBagWarningDialog'
 local SYNC_KIND_DELTA = 0
 local SYNC_KIND_FISH_STACK_STATE = 1
 local SYNC_KIND_FISH_STACK_DELTA = 2
+
+local function RememberKnownItemLink(itemLink)
+  local entry = FarmingPartyPlusFishingSyncLookup:GetByNormalizedName(NormalizeItemName(itemLink))
+  if entry ~= nil then
+    knownFishingLinksByCode[entry.code] = itemLink
+  end
+end
+
+local function ResolveKnownItemLink(itemCode, fallbackLink)
+  itemCode = tonumber(itemCode) or 0
+  if itemCode > 0 and knownFishingLinksByCode[itemCode] ~= nil then
+    return knownFishingLinksByCode[itemCode]
+  end
+  return fallbackLink or ''
+end
 
 local function BuildBagSlotKey(bagId, slotIndex)
   return string.format('%d:%d', bagId, slotIndex)
@@ -131,6 +139,7 @@ function FarmingPartyPlusLoot:Finalize()
 end
 
 function FarmingPartyPlusLoot:ClearSessionState()
+  ZO_ClearTable(knownFishingLinksByCode)
   ZO_ClearTable(trackedLocalFishSlots)
   ZO_ClearTable(trackedLocalFishSlotKeysByItemName)
   ZO_ClearTable(trackedSyncedFishSlots)
@@ -287,18 +296,18 @@ local function RecordNativeLoot(displayName, itemLink, quantity, lootType)
 end
 
 local function ResolveSyncedTrackedItem(data)
-  local itemLink = data.itemLink
-  if (itemLink == nil or itemLink == '') and data.itemId ~= nil then
-    itemLink = BuildCanonicalItemLink(data.itemId)
-    data.itemLink = itemLink
-  end
+  local syncEntry = FarmingPartyPlusFishingSyncLookup:GetByCode(data.itemCode)
+  local itemLink = syncEntry ~= nil and ResolveKnownItemLink(syncEntry.code, data.itemLink) or data.itemLink
   local itemName = data.itemName
-  if (itemName == nil or itemName == '') and itemLink ~= nil and itemLink ~= '' then
+  if (itemName == nil or itemName == '') and syncEntry ~= nil then
+    itemName = syncEntry.name
+    data.itemName = itemName
+  elseif (itemName == nil or itemName == '') and itemLink ~= nil and itemLink ~= '' then
     itemName = NormalizeItemName(itemLink)
     data.itemName = itemName
   end
   local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
-  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or 0
+  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or (tonumber(data.itemValue) or 0)
   return trackedItem, resolvedItemValue
 end
 
@@ -324,8 +333,9 @@ end
 
 local function GetSyncedItemLink(data)
   local itemLink = data.itemLink
-  if (itemLink == nil or itemLink == '') and data.itemId ~= nil then
-    itemLink = BuildCanonicalItemLink(data.itemId)
+  local syncEntry = FarmingPartyPlusFishingSyncLookup:GetByCode(data.itemCode)
+  if syncEntry ~= nil then
+    itemLink = ResolveKnownItemLink(syncEntry.code, itemLink)
     data.itemLink = itemLink
   end
   return itemLink
@@ -377,11 +387,23 @@ function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
   if data.lootType == LOOT_TYPE_QUEST_ITEM then
     return false
   end
-  local itemLink = GetSyncedItemLink(data)
-  if itemLink == nil or itemLink == '' then
+  local syncEntry = FarmingPartyPlusFishingSyncLookup:GetByCode(data.itemCode)
+  if syncEntry == nil then
     return false
   end
-  return self:ShouldTrackItem(itemLink, data.lootType)
+  local itemLink = GetSyncedItemLink(data)
+  if itemLink ~= nil and itemLink ~= '' then
+    return self:ShouldTrackItem(itemLink, data.lootType)
+  end
+
+  if Settings:UseWhitelistMode() then
+    if syncEntry.kind == 'common_fish' then
+      return Settings:IsWhitelistRuleEnabled('__fish_any__')
+    end
+    return Settings:IsWhitelistedItem(syncEntry.key)
+  end
+
+  return (tonumber(syncEntry.quality) or ITEM_QUALITY_TRASH) >= (tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH)
 end
 
 function FarmingPartyPlusLoot:RememberLocalFishSlot(bagId, slotIndex)
@@ -464,6 +486,7 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
   end
 
   local normalizedItemName = NormalizeItemName(itemLink)
+  RememberKnownItemLink(itemLink)
   if lootedByPlayer then
     self:WarnAboutCraftBagAutoAddIfNeeded(itemLink)
   end
@@ -515,6 +538,9 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
   local quantity = tonumber(data.quantity) or 1
   local trackedItem, resolvedItemValue = ResolveSyncedTrackedItem(data)
   local syncKind = tonumber(data.syncKind) or SYNC_KIND_DELTA
+  if type(trackedItem) == 'string' and zo_plainstrfind(trackedItem, '|H') == 1 then
+    RememberKnownItemLink(trackedItem)
+  end
 
   if quantity == 0 then
     return

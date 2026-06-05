@@ -405,6 +405,11 @@ end
 
 function FarmingPartyPlusMemberList:RefreshOnlineStates()
   local onlineByMemberKey = {}
+  local localPlayerKey = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
+  if localPlayerKey ~= '' then
+    onlineByMemberKey[localPlayerKey] = true
+  end
+
   for i = 1, GetGroupSize() do
     local unitTag = GetGroupUnitTagByIndex(i)
     if unitTag ~= nil and DoesUnitExist(unitTag) then

@@ -42,18 +42,18 @@
         end
       </OnInitialized>
       <OnMouseEnter>
-        if(string.len(self:GetText()) > 0) then
+        if(string.len(self:GetText()) > 0 and zo_plainstrfind(self:GetText(), "|H") == 1) then
           InitializeTooltip(ItemTooltip, self)
           ItemTooltip:SetLink(self:GetText())
         end
       </OnMouseEnter>
       <OnMouseExit>
-        if(string.len(self:GetText()) > 0) then
+        if(string.len(self:GetText()) > 0 and zo_plainstrfind(self:GetText(), "|H") == 1) then
           ClearTooltip(ItemTooltip)
         end
       </OnMouseExit>
       <OnMouseUp>
-        if upInside then
+        if upInside and zo_plainstrfind(self:GetText(), "|H") == 1 then
           ZO_LinkHandler_OnLinkClicked(self:GetText(), button, self)
         end
       </OnMouseUp>

@@ -8,11 +8,14 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 
 ### Changed
 - The recommended install flow now treats `FarmingPartyPlus` as the normal one-addon path for both sending and receiving fishing/gutting sync.
-- Sync payloads now send compact numeric `itemId` values instead of full item links, with the receiver rebuilding link metadata locally before applying whitelist, pricing, and history logic.
+- Fishing/gutting sync now uses a shared lookup-table payload for the tracked fishing domain instead of shipping full item links through `LibGroupBroadcast`.
 - Account-wide settings and saved member state are now separated by `GetWorldName()` so NA, EU, and other server families stop sharing the same persisted addon data.
+- Removed the old `/fpp sync` command now that sync is part of the normal built-in FPP flow.
 
 ### Fixed
-- Synced loot filtering now uses the same local item-link rules as ordinary loot, so the lighter `itemId` payload still respects whitelist, recipe, pricing, and exclusion behavior consistently.
+- Synced fishing/gutting updates now resolve reliably on other `FarmingPartyPlus` clients for stack replay, processed fish subtraction, and `Fish` / `Perfect Roe` outputs.
+- Solo host rows no longer gray out as if they were offline when you are not grouped.
+- Best-item hover tooltips now ignore plain-text fallback names instead of trying to open malformed ESO item links.
 
 ## [3.0.6] - 2026-06-04
 ### Changed

@@ -22,6 +22,7 @@ members/MemberItem.lua
 members/MemberList.lua
 members/MemberItems.lua
 logger/Logger.lua
+sync/FishingLookup.lua
 sync/Sync.lua
 filters/FilterWindow.lua
 loot/Loot.lua
