@@ -3,6 +3,9 @@ local MESH_SYNC_PROTOCOL_ID = 392
 local SYNC_PROTOCOL_NAME = 'FarmingPartyPlusSyncLoot'
 local MESH_SYNC_PROTOCOL_NAME = 'FarmingPartyPlusMeshLoot'
 local DUPLICATE_WINDOW_SECONDS = 5
+local SENDER_EVENT_NAMESPACE = 'FarmingPartyPlusSyncSender'
+local DELTA_BATCH_WINDOW_MS = 3000
+local MAX_SYNC_QUANTITY_PER_MESSAGE = 1000
 local SYNC_KIND_DELTA = 0
 local SYNC_KIND_FISH_STACK_STATE = 1
 local SYNC_KIND_FISH_STACK_DELTA = 2
@@ -12,6 +15,9 @@ local OBSERVED_SOURCE_SYNC = 'sync'
 FarmingPartyPlusSyncHost = ZO_Object:Subclass()
 
 local observedEvents = {}
+local senderTrackedFishSlots = {}
+local senderTrackedFishSlotKeysByItemName = {}
+local senderRecentGuttingOutputs = {}
 
 local function NormalizeText(text)
   if text == nil then
@@ -76,16 +82,444 @@ local function GetObservedEvent(displayName, itemName, quantity, lootType)
   return eventKey, observedEvents[eventKey]
 end
 
+local function BuildBagSlotKey(bagId, slotIndex)
+  return string.format('%d:%d', bagId, slotIndex)
+end
+
+local function AddIndexedSlotKey(indexTable, itemName, slotKey)
+  if itemName == nil or itemName == '' then
+    return
+  end
+  local slotKeys = indexTable[itemName]
+  if slotKeys == nil then
+    slotKeys = {}
+    indexTable[itemName] = slotKeys
+  end
+  slotKeys[slotKey] = true
+end
+
+local function RemoveIndexedSlotKey(indexTable, itemName, slotKey)
+  if itemName == nil or itemName == '' then
+    return
+  end
+  local slotKeys = indexTable[itemName]
+  if slotKeys == nil then
+    return
+  end
+  slotKeys[slotKey] = nil
+  if next(slotKeys) == nil then
+    indexTable[itemName] = nil
+  end
+end
+
+local function IsBackpackSlot(bagId)
+  return bagId == BAG_BACKPACK
+end
+
+local function IsGuttableFishItem(itemLink)
+  return GetItemLinkItemType(itemLink) == ITEMTYPE_FISH
+      and GetItemLinkQuality(itemLink) <= ITEM_QUALITY_NORMAL
+      and GetNormalizedItemNameFromLink(itemLink) ~= 'fish'
+end
+
+local function GetItemPrice(itemLink)
+  if LibPrice ~= nil and LibPrice.ItemLinkToPriceGold ~= nil then
+    local price = LibPrice.ItemLinkToPriceGold(itemLink)
+    if price ~= nil and price > 0 then
+      return price
+    end
+  end
+  return GetItemLinkValue(itemLink, true) or 0
+end
+
+local function IsTrackedGuttingOutputName(itemName)
+  return itemName == 'fish' or itemName == 'perfect roe'
+end
+
+local function ShouldSyncDirectCatch(itemLink)
+  local itemType = GetItemLinkItemType(itemLink)
+  if itemType == ITEMTYPE_FISH then
+    return not IsGuttableFishItem(itemLink)
+  end
+  return false
+end
+
+local function BuildRecentOutputKey(itemLink, quantity)
+  return string.format('%s|%s', GetNormalizedItemNameFromLink(itemLink), tostring(quantity or 0))
+end
+
+local function BuildQueuedDeltaKey(itemLink, quantity, itemType, equipType, quality, lootType, itemValue, syncKind, bagId, slotIndex)
+  return table.concat({
+    itemLink or '',
+    quantity >= 0 and 'positive' or 'negative',
+    tostring(itemType or 0),
+    tostring(equipType or 0),
+    tostring(quality or 0),
+    tostring(lootType or 0),
+    tostring(itemValue or 0),
+    tostring(syncKind or SYNC_KIND_DELTA),
+    tostring(bagId or 0),
+    tostring(slotIndex or 0)
+  }, '|')
+end
+
+local function BuildLinkDeltaData(itemLink, lootType)
+  local itemType = GetItemLinkItemType(itemLink)
+  local _, _, _, equipType = GetItemLinkInfo(itemLink)
+  return {
+    itemLink = itemLink,
+    itemType = itemType,
+    equipType = equipType,
+    quality = GetItemLinkQuality(itemLink),
+    lootType = lootType or LOOT_TYPE_ITEM,
+    itemValue = GetItemPrice(itemLink)
+  }
+end
+
+local function CleanupRecentOutputs(now)
+  for eventKey, timestamp in pairs(senderRecentGuttingOutputs) do
+    if now - timestamp > 2 then
+      senderRecentGuttingOutputs[eventKey] = nil
+    end
+  end
+end
+
+local FarmingPartyPlusSyncSender = ZO_Object:Subclass()
+
 function FarmingPartyPlusSyncHost:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
   return obj
 end
 
+function FarmingPartyPlusSyncSender:New(syncHost)
+  local obj = ZO_Object.New(self)
+  obj:Initialize(syncHost)
+  return obj
+end
+
+function FarmingPartyPlusSyncSender:Initialize(syncHost)
+  self.syncHost = syncHost
+  self.enabled = false
+  self.pendingSyncDeltas = {}
+  self.pendingFlushGeneration = 0
+
+  if syncHost == nil or syncHost.meshProtocol == nil then
+    return
+  end
+
+  self.enabled = true
+  EVENT_MANAGER:RegisterForEvent(SENDER_EVENT_NAMESPACE, EVENT_LOOT_RECEIVED, function(...)
+    self:OnLootReceived(...)
+  end)
+  EVENT_MANAGER:RegisterForEvent(SENDER_EVENT_NAMESPACE, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function(...)
+    self:OnInventorySlotUpdated(...)
+  end)
+end
+
+function FarmingPartyPlusSyncSender:Finalize()
+  EVENT_MANAGER:UnregisterForEvent(SENDER_EVENT_NAMESPACE, EVENT_LOOT_RECEIVED)
+  EVENT_MANAGER:UnregisterForEvent(SENDER_EVENT_NAMESPACE, EVENT_INVENTORY_SINGLE_SLOT_UPDATE)
+end
+
+function FarmingPartyPlusSyncSender:IsEnabled()
+  return self.enabled == true and self.syncHost ~= nil and self.syncHost.meshProtocol ~= nil
+end
+
+function FarmingPartyPlusSyncSender:ClearSessionState()
+  ZO_ClearTable(senderTrackedFishSlots)
+  ZO_ClearTable(senderTrackedFishSlotKeysByItemName)
+  ZO_ClearTable(senderRecentGuttingOutputs)
+  ZO_ClearTable(self.pendingSyncDeltas)
+  self.pendingFlushGeneration = 0
+end
+
+function FarmingPartyPlusSyncSender:RememberFishSlot(bagId, slotIndex)
+  if not IsBackpackSlot(bagId) then
+    return
+  end
+
+  local slotKey = BuildBagSlotKey(bagId, slotIndex)
+  local existingTrackedSlot = senderTrackedFishSlots[slotKey]
+  local itemLink = GetItemLink(bagId, slotIndex)
+  if itemLink == nil or itemLink == '' or not IsGuttableFishItem(itemLink) then
+    if existingTrackedSlot ~= nil then
+      RemoveIndexedSlotKey(senderTrackedFishSlotKeysByItemName, existingTrackedSlot.itemName, slotKey)
+      senderTrackedFishSlots[slotKey] = nil
+    end
+    return
+  end
+
+  local normalizedItemName = GetNormalizedItemNameFromLink(itemLink)
+  local preservedClaimedCount = 0
+  if existingTrackedSlot ~= nil and existingTrackedSlot.itemName == normalizedItemName then
+    preservedClaimedCount = existingTrackedSlot.claimedCount or 0
+  elseif existingTrackedSlot ~= nil then
+    RemoveIndexedSlotKey(senderTrackedFishSlotKeysByItemName, existingTrackedSlot.itemName, slotKey)
+  end
+
+  senderTrackedFishSlots[slotKey] = {
+    bagId = bagId,
+    slotIndex = slotIndex,
+    itemName = normalizedItemName,
+    itemLink = itemLink,
+    itemType = GetItemLinkItemType(itemLink),
+    equipType = select(4, GetItemLinkInfo(itemLink)),
+    quality = GetItemLinkQuality(itemLink),
+    itemValue = GetItemPrice(itemLink),
+    stackCount = GetSlotStackSize(bagId, slotIndex),
+    claimedCount = preservedClaimedCount
+  }
+  AddIndexedSlotKey(senderTrackedFishSlotKeysByItemName, normalizedItemName, slotKey)
+end
+
+function FarmingPartyPlusSyncSender:CaptureFishSlotsByName(normalizedItemName)
+  local capturedSlotKeys = {}
+  local bagSize = GetBagSize(BAG_BACKPACK)
+  for slotIndex = 0, bagSize - 1 do
+    local slotItemLink = GetItemLink(BAG_BACKPACK, slotIndex)
+    if slotItemLink ~= nil and slotItemLink ~= '' and GetNormalizedItemNameFromLink(slotItemLink) == normalizedItemName and IsGuttableFishItem(slotItemLink) then
+      self:RememberFishSlot(BAG_BACKPACK, slotIndex)
+      capturedSlotKeys[#capturedSlotKeys + 1] = BuildBagSlotKey(BAG_BACKPACK, slotIndex)
+    end
+  end
+  return capturedSlotKeys
+end
+
+function FarmingPartyPlusSyncSender:ClaimFishSlotForSession(bagId, slotIndex, caughtQuantity)
+  if not IsBackpackSlot(bagId) then
+    return
+  end
+
+  local itemLink = GetItemLink(bagId, slotIndex)
+  if itemLink == nil or itemLink == '' or not IsGuttableFishItem(itemLink) then
+    return
+  end
+
+  local slotKey = BuildBagSlotKey(bagId, slotIndex)
+  local trackedSlot = senderTrackedFishSlots[slotKey]
+  local claimedCatchQuantity = tonumber(caughtQuantity) or 0
+  local normalizedItemName = GetNormalizedItemNameFromLink(itemLink)
+  local preservedClaimedCount = 0
+  if trackedSlot ~= nil and trackedSlot.itemName == normalizedItemName then
+    preservedClaimedCount = trackedSlot.claimedCount or 0
+  end
+
+  senderTrackedFishSlots[slotKey] = {
+    bagId = bagId,
+    slotIndex = slotIndex,
+    itemName = normalizedItemName,
+    itemLink = itemLink,
+    itemType = GetItemLinkItemType(itemLink),
+    equipType = select(4, GetItemLinkInfo(itemLink)),
+    quality = GetItemLinkQuality(itemLink),
+    itemValue = GetItemPrice(itemLink),
+    stackCount = GetSlotStackSize(bagId, slotIndex),
+    claimedCount = preservedClaimedCount
+  }
+
+  self:SendDelta(
+    itemLink,
+    claimedCatchQuantity,
+    GetItemLinkItemType(itemLink),
+    select(4, GetItemLinkInfo(itemLink)),
+    GetItemLinkQuality(itemLink),
+    LOOT_TYPE_ITEM,
+    GetItemPrice(itemLink),
+    SYNC_KIND_FISH_STACK_STATE,
+    bagId,
+    slotIndex,
+    senderTrackedFishSlots[slotKey].stackCount
+  )
+  senderTrackedFishSlots[slotKey].claimedCount = senderTrackedFishSlots[slotKey].stackCount
+end
+
+function FarmingPartyPlusSyncSender:SendDelta(itemLink, quantity, itemType, equipType, quality, lootType, itemValue, syncKind, bagId, slotIndex, claimedCount)
+  if not self:IsEnabled() or quantity == 0 then
+    return
+  end
+
+  local queuedDeltaKey = BuildQueuedDeltaKey(itemLink, quantity, itemType, equipType, quality, lootType, itemValue, syncKind, bagId, slotIndex)
+  local pendingDelta = self.pendingSyncDeltas[queuedDeltaKey]
+  if pendingDelta == nil then
+    pendingDelta = {
+      itemLink = itemLink,
+      quantity = 0,
+      itemType = itemType,
+      equipType = equipType,
+      quality = quality,
+      lootType = lootType,
+      itemValue = itemValue,
+      syncKind = syncKind or SYNC_KIND_DELTA,
+      bagId = bagId or 0,
+      slotIndex = slotIndex or 0,
+      claimedCount = claimedCount or 0
+    }
+    self.pendingSyncDeltas[queuedDeltaKey] = pendingDelta
+  end
+
+  pendingDelta.quantity = (pendingDelta.quantity or 0) + quantity
+  pendingDelta.claimedCount = claimedCount or pendingDelta.claimedCount or 0
+  if pendingDelta.quantity == 0 then
+    self.pendingSyncDeltas[queuedDeltaKey] = nil
+  end
+
+  self.pendingFlushGeneration = self.pendingFlushGeneration + 1
+  local flushGeneration = self.pendingFlushGeneration
+  zo_callLater(function()
+    if flushGeneration ~= self.pendingFlushGeneration then
+      return
+    end
+    self:FlushQueuedDeltas()
+  end, DELTA_BATCH_WINDOW_MS)
+end
+
+function FarmingPartyPlusSyncSender:FlushQueuedDeltas()
+  if not self:IsEnabled() then
+    ZO_ClearTable(self.pendingSyncDeltas)
+    return
+  end
+
+  for queuedDeltaKey, pendingDelta in pairs(self.pendingSyncDeltas) do
+    local remainingQuantity = pendingDelta.quantity or 0
+    while remainingQuantity ~= 0 do
+      local quantityDirection = remainingQuantity > 0 and 1 or -1
+      local chunkQuantity = math.min(math.abs(remainingQuantity), MAX_SYNC_QUANTITY_PER_MESSAGE) * quantityDirection
+      self:SendDeltaNow(
+        pendingDelta.itemLink,
+        chunkQuantity,
+        pendingDelta.itemType,
+        pendingDelta.equipType,
+        pendingDelta.quality,
+        pendingDelta.lootType,
+        pendingDelta.itemValue,
+        pendingDelta.syncKind,
+        pendingDelta.bagId,
+        pendingDelta.slotIndex,
+        pendingDelta.claimedCount
+      )
+      remainingQuantity = remainingQuantity - chunkQuantity
+    end
+    self.pendingSyncDeltas[queuedDeltaKey] = nil
+  end
+end
+
+function FarmingPartyPlusSyncSender:SendDeltaNow(itemLink, quantity, itemType, equipType, quality, lootType, itemValue, syncKind, bagId, slotIndex, claimedCount)
+  if not self:IsEnabled() or quantity == 0 then
+    return
+  end
+
+  self.syncHost:SendMeshDelta({
+    senderDisplayName = UndecorateDisplayName(GetDisplayName('player')),
+    itemLink = itemLink,
+    quantity = quantity,
+    itemType = itemType,
+    equipType = equipType,
+    quality = quality,
+    lootType = lootType,
+    itemValue = itemValue,
+    syncKind = syncKind or SYNC_KIND_DELTA,
+    bagId = bagId or 0,
+    slotIndex = slotIndex or 0,
+    claimedCount = claimedCount or 0
+  })
+end
+
+function FarmingPartyPlusSyncSender:QueueLinkDelta(itemLink, quantity, lootType, syncKind, bagId, slotIndex, claimedCount)
+  local itemData = BuildLinkDeltaData(itemLink, lootType)
+  self:SendDelta(
+    itemData.itemLink,
+    quantity,
+    itemData.itemType,
+    itemData.equipType,
+    itemData.quality,
+    itemData.lootType,
+    itemData.itemValue,
+    syncKind,
+    bagId,
+    slotIndex,
+    claimedCount
+  )
+end
+
+function FarmingPartyPlusSyncSender:OnLootReceived(eventCode, name, itemLink, quantity, itemSound, lootType, lootedByPlayer)
+  if not self:IsEnabled() or not lootedByPlayer or lootType == LOOT_TYPE_QUEST_ITEM then
+    return
+  end
+
+  local normalizedItemName = GetNormalizedItemNameFromLink(itemLink)
+  if IsTrackedGuttingOutputName(normalizedItemName) then
+    local eventKey = BuildRecentOutputKey(itemLink, quantity)
+    CleanupRecentOutputs(GetTimeStamp())
+    senderRecentGuttingOutputs[eventKey] = GetTimeStamp()
+    self:QueueLinkDelta(itemLink, quantity, lootType)
+    return
+  end
+
+  if not IsGuttableFishItem(itemLink) then
+    if ShouldSyncDirectCatch(itemLink) then
+      self:QueueLinkDelta(itemLink, quantity, lootType, SYNC_KIND_DELTA)
+    end
+    return
+  end
+
+  zo_callLater(function()
+    local slotKeys = self:CaptureFishSlotsByName(normalizedItemName)
+    for _, slotKey in ipairs(slotKeys) do
+      local trackedSlot = senderTrackedFishSlots[slotKey]
+      if trackedSlot ~= nil then
+        self:ClaimFishSlotForSession(trackedSlot.bagId, trackedSlot.slotIndex, quantity)
+      end
+    end
+  end, 0)
+end
+
+function FarmingPartyPlusSyncSender:OnInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem, itemSoundCategory, inventoryUpdateReason, stackCountChange)
+  if not self:IsEnabled() or not IsBackpackSlot(bagId) then
+    return
+  end
+
+  local slotKey = BuildBagSlotKey(bagId, slotIndex)
+  local trackedSlot = senderTrackedFishSlots[slotKey]
+  local countDelta = tonumber(stackCountChange) or 0
+
+  if trackedSlot ~= nil and countDelta < 0 then
+    local quantityRemoved = math.min(math.abs(countDelta), trackedSlot.claimedCount or math.abs(countDelta))
+    local remainingClaimedCount = math.max((trackedSlot.claimedCount or 0) - quantityRemoved, 0)
+    self:QueueLinkDelta(trackedSlot.itemLink, -quantityRemoved, LOOT_TYPE_ITEM, SYNC_KIND_FISH_STACK_DELTA, bagId, slotIndex, remainingClaimedCount)
+    trackedSlot.stackCount = math.max((trackedSlot.stackCount or 0) - quantityRemoved, 0)
+    trackedSlot.claimedCount = remainingClaimedCount
+    if trackedSlot.claimedCount == 0 then
+      RemoveIndexedSlotKey(senderTrackedFishSlotKeysByItemName, trackedSlot.itemName, slotKey)
+      senderTrackedFishSlots[slotKey] = nil
+    end
+  end
+
+  if countDelta > 0 then
+    local itemLink = GetItemLink(bagId, slotIndex)
+    if itemLink ~= nil and itemLink ~= '' then
+      local normalizedItemName = GetNormalizedItemNameFromLink(itemLink)
+      if IsTrackedGuttingOutputName(normalizedItemName) then
+        local eventKey = BuildRecentOutputKey(itemLink, countDelta)
+        CleanupRecentOutputs(GetTimeStamp())
+        if senderRecentGuttingOutputs[eventKey] ~= nil then
+          senderRecentGuttingOutputs[eventKey] = nil
+          self:RememberFishSlot(bagId, slotIndex)
+          return
+        end
+        self:QueueLinkDelta(itemLink, countDelta, LOOT_TYPE_ITEM)
+      end
+    end
+  end
+
+  self:RememberFishSlot(bagId, slotIndex)
+end
+
 function FarmingPartyPlusSyncHost:Initialize()
   self.enabled = false
   self.protocol = nil
   self.meshProtocol = nil
+  self.sender = nil
 
   local lib = LibGroupBroadcast
   if type(lib) ~= 'table' then
@@ -100,6 +534,7 @@ function FarmingPartyPlusSyncHost:Initialize()
   self.protocol = self:DeclareProtocol(handler, lib, SYNC_PROTOCOL_ID, SYNC_PROTOCOL_NAME)
   self.meshProtocol = self:DeclareProtocol(handler, lib, MESH_SYNC_PROTOCOL_ID, MESH_SYNC_PROTOCOL_NAME)
   self.enabled = true
+  self.sender = FarmingPartyPlusSyncSender:New(self)
 end
 
 function FarmingPartyPlusSyncHost:DeclareProtocol(handler, lib, protocolId, protocolName)
@@ -127,10 +562,16 @@ function FarmingPartyPlusSyncHost:DeclareProtocol(handler, lib, protocolId, prot
 end
 
 function FarmingPartyPlusSyncHost:Finalize()
+  if self.sender ~= nil and self.sender.Finalize ~= nil then
+    self.sender:Finalize()
+  end
 end
 
 function FarmingPartyPlusSyncHost:ClearSessionState()
   ZO_ClearTable(observedEvents)
+  if self.sender ~= nil and self.sender.ClearSessionState ~= nil then
+    self.sender:ClearSessionState()
+  end
 end
 
 function FarmingPartyPlusSyncHost:IsEnabled()

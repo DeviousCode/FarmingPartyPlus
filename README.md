@@ -13,7 +13,7 @@ It is designed for players who want to run organized farming groups without clut
 - Lets you toggle exactly which materials count
 - Shows tracked loot in a scoreboard window and item breakdown window
 - Logs loot to chat and the loot window
-- Supports optional helper sync through a separate addon
+- Can send and receive its own fishing/gutting sync when `LibGroupBroadcast` is installed
 - Supports fishing-session gutting flows, including processed fish subtraction and `Fish` / `Perfect Roe` outputs
 - Shows explicit `Stack Found` history lines when a later catch causes an already-held common-fish stack to be claimed into the session total
 - Supports saved whitelist profiles and recipe value filtering
@@ -34,7 +34,7 @@ Instead of tracking loot only by item quality, you can choose exactly what count
 - enchanting rune runs
 - provisioning ingredient runs
 - furnishing mat runs
-- bait and fishing runs
+- fishing runs
 
 When whitelist mode is enabled, only the items you turn on will count.
 
@@ -49,8 +49,6 @@ The whitelist window groups items into clear sections so it is easy to build a c
 - `Alchemy`
 - `Enchanting`
 - `Provisioning`
-- `Common Bait`
-- `Rare Bait`
 - `Fishing`
 - `Furnishing Mats`
 
@@ -146,37 +144,19 @@ Typical path:
 - `LibAsync`
 - `LibPrice`
 
-### Optional Sync Helper
-
-There is also an optional separate helper addon:
-
-- `FarmingPartyPlusSync`
-
-This is not required for normal host tracking.
-
-Its main purpose is to improve fishing-session accuracy, especially for fish gutting and related outputs that are easier to detect on the local client than on the host.
-
-In practice, it is most useful for:
-
-- processed fish subtraction
-- `Fish`
-- `Perfect Roe`
-- other fishing-session inventory changes the host may not see reliably on its own
-
-If it is not installed, the main addon still works normally for standard host-visible loot tracking, but fishing and gutting events may be less complete than they are with the helper installed on non-host group members.
-
-If both addons are installed on the same client, the helper can still contribute local fishing and gutting sync to other `FarmingPartyPlus` users in the group.
-
 ### Optional Sync Library
 
 If you want to use the optional sync path, install:
 
 - `LibGroupBroadcast`
 
-`LibGroupBroadcast` is not required for normal `FarmingPartyPlus` use. It is only needed for:
+`LibGroupBroadcast` is not required for normal `FarmingPartyPlus` use. It is only needed for the extra fishing/gutting sync path:
 
-- `FarmingPartyPlusSync`
-- optional sync receive support in `FarmingPartyPlus`
+- processed fish subtraction
+- `Fish`
+- `Perfect Roe`
+- touched fish-stack replay after reset or late join
+- blue trash fish that are easier to reconstruct locally than remotely
 
 ## Commands
 
@@ -195,20 +175,12 @@ If you want to use the optional sync path, install:
 | `/fpp log` | Toggle the loot history window |
 | `/fpp whitelist on` | Enable whitelist mode |
 | `/fpp whitelist off` | Disable whitelist mode |
-| `/fpp sync` | Show optional sync receiver status |
+| `/fpp sync` | Show sync receiver status |
 | `/fppc` | Output current scores to the chat input |
 | `/fpphelp` | Print command help |
 | `/fpploot` | Toggle the loot history window |
 | `/fp` | Legacy alias for `/fpp` |
 | `/fpc` | Legacy alias for `/fppc` |
-
-### Helper Command
-
-If you are testing the optional sync helper:
-
-| Command | Description |
-| --- | --- |
-| `/fppsync` | Show helper sync sender status |
 
 ## Recommended Use
 
@@ -230,25 +202,24 @@ You only need:
 
 This is the standard setup.
 
-### For Optional Helper Testing
+### For Multi-Client Fishing/Gutting Sync
 
 Use:
 
-- `FarmingPartyPlus` on the host
-- `FarmingPartyPlusSync` on helper-only clients, or on full-addon clients that also want to contribute local fishing and gutting mesh sync
-- `LibGroupBroadcast` on both clients
+- `FarmingPartyPlus` on every participating client
+- `LibGroupBroadcast` on every client that should contribute fishing/gutting sync
 
-### Optional Helper Indicators
+### Sync Indicators
 
-The members window also shows whether the host has observed helper sync traffic from a party member.
+The members window also shows whether the host has observed sync traffic from a party member.
 
-This helps confirm that a helper client is actually talking to the host during event testing.
+This helps confirm that another `FarmingPartyPlus` client is actually talking to the host during event testing.
 
 ## Notes
 
 - Saved variables update on `/reloadui`, logout, or exit
 - Group loot tracking depends on what the ESO API exposes to the host client
-- Some actions are easier to see locally than remotely, which is why optional sync exists as a separate path
+- Some actions are easier to see locally than remotely, which is why the optional sync path exists
 - Gear and motif filters still apply when whitelist mode is active
 - Loot history can be shown or hidden independently of chat logging through the keybind or loot-window commands
 - Fishing outputs can be affected by ESO `Auto-Add to Craft Bag`, so the addon warns when that setting would interfere with tracked fishing results

@@ -8,8 +8,6 @@ FarmingPartyPlusItemCatalog = {
     enchanting = "Enchanting",
     provisioning = "Provisioning",
     recipes = "Recipes",
-    baitCommon = "Common Bait",
-    baitRare = "Rare Bait",
     fishing = "Fishing",
     furnishing = "Furnishing Mats"
   },
@@ -149,16 +147,6 @@ FarmingPartyPlusItemCatalog = {
     { key = "flour", name = "Flour", category = "provisioning", defaultEnabled = false },
 
     { key = "__recipes_any__", name = "All Recipes (uses recipe value floor below)", category = "recipes", defaultEnabled = false },
-
-    { key = "worms", name = "Worms", category = "baitCommon", defaultEnabled = false },
-    { key = "guts", name = "Guts", category = "baitCommon", defaultEnabled = false },
-    { key = "insect parts", name = "Insect Parts", category = "baitCommon", defaultEnabled = false },
-
-    { key = "crawlers", name = "Crawlers", category = "baitRare", defaultEnabled = true },
-    { key = "foul bait", name = "Foul Bait", category = "baitRare", defaultEnabled = true },
-    { key = "chub", name = "Chub", category = "baitRare", defaultEnabled = true },
-    { key = "minnow", name = "Minnow", category = "baitRare", defaultEnabled = true },
-    { key = "shad", name = "Shad", category = "baitRare", defaultEnabled = true },
 
     { key = "__fish_any__", name = "All Fish", category = "fishing", defaultEnabled = false },
     { key = "pyandonean bottle", name = "Pyandonean Bottle", category = "fishing", defaultEnabled = true },

@@ -2,6 +2,13 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
+## [Unreleased]
+### Added
+- `FarmingPartyPlus` now owns the local fishing/gutting sender path directly when `LibGroupBroadcast` is installed, so the main addon can contribute sync without relying on the separate helper addon.
+
+### Changed
+- The recommended install flow now treats `FarmingPartyPlus` as the normal one-addon path for both sending and receiving fishing/gutting sync.
+
 ## [3.0.6] - 2026-06-04
 ### Changed
 - Sync receiver handling now derives item names locally from `itemLink` and keeps only the display-name identity field on the wire, reducing redundant helper payload data without changing the tested fishing and gutting flow.

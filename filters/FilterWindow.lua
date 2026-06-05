@@ -1,6 +1,6 @@
 local listContainer
 local Settings
-local CATEGORY_ORDER = { 'ore', 'wood', 'cloth', 'jewelry', 'alchemy', 'enchanting', 'provisioning', 'recipes', 'baitCommon', 'baitRare', 'fishing', 'furnishing' }
+local CATEGORY_ORDER = { 'ore', 'wood', 'cloth', 'jewelry', 'alchemy', 'enchanting', 'provisioning', 'recipes', 'fishing', 'furnishing' }
 local RECIPE_VALUE_MIN = 100
 local RECIPE_VALUE_MAX = 50000
 local RECIPE_BAR_WIDTH = 300
