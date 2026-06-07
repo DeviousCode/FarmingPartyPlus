@@ -2,32 +2,35 @@
 
 All notable changes to `FarmingPartyPlus` are documented in this file.
 
-## [Unreleased]
+## [3.0.7] - 2026-06-07
 ### Added
-- `FarmingPartyPlus` now owns the local fishing/gutting sender path directly when `LibGroupBroadcast` is installed, so the main addon can contribute sync without relying on the separate helper addon.
-- Added a preferred market price source setting so users can choose `Auto`, `TTC`, `MM`, or `ATT` while always keeping vendor value as the final fallback.
-- Added an optional loot-history display setting to append the active price source label (`TTC`, `MM`, `ATT`, or `Vendor`) after the gold value in chat and loot window lines.
+
+- `FarmingPartyPlus` can now handle local fishing and gutting sync directly when `LibGroupBroadcast` is installed. This means the main addon can send sync updates on its own without needing the separate helper addon.
+- Added a preferred market price source setting. You can now choose `Auto`, `TTC`, `MM`, or `ATT`, with vendor value always used as the final fallback.
+- Added an optional loot-history setting that shows the active price source after gold values in chat and loot window lines, such as `TTC`, `MM`, `ATT`, or `Vendor`.
 
 ### Changed
-- The recommended install flow now treats `FarmingPartyPlus` as the normal one-addon path for both sending and receiving fishing/gutting sync.
-- Fishing/gutting sync now uses a shared lookup-table payload for the tracked fishing domain instead of shipping full item links through `LibGroupBroadcast`.
-- `FarmingPartyPlus` now advertises `LibGroupBroadcast>=95` as an optional dependency in the main manifest, since the built-in sync path now lives in the main addon.
-- Account-wide settings and saved member state are now separated by `GetWorldName()` so NA, EU, and other server families stop sharing the same persisted addon data.
-- Removed the old `/fpp sync` command now that sync is part of the normal built-in FPP flow.
-- Consolidated the built-in sync path to a single `LibGroupBroadcast` protocol now that the old helper split is no longer part of the active install flow.
-- Reduced the addon’s public Lua surface by routing module constructors and window actions through the main `FarmingPartyPlus` table instead of a set of standalone global class names.
-- Centralized tracking-status ownership in `Startup.lua` so the top-level addon controls enabled/disabled state while member and loot modules only manage their own event registrations.
-- Pricing now uses a shared addon helper for loot, sync, recipe filtering, and stack tracking so all value calculations follow the same market-source priority rules.
-- The `Logs` whitelist category now uses raw node-drop wood names like `Rough Maple` and `Rough Ruby Ash`, which match what players actually loot from wood nodes.
+
+- The recommended setup is now the normal one-addon install: `FarmingPartyPlus` handles both sending and receiving fishing/gutting sync when `LibGroupBroadcast` is available.
+- Fishing and gutting sync now uses a shared lookup-table payload for tracked fishing items instead of sending full item links through `LibGroupBroadcast`.
+- `LibGroupBroadcast>=95` is now listed as an optional dependency in the main addon manifest, since the built-in sync path now lives inside `FarmingPartyPlus`.
+- Account-wide settings and saved member data are now separated by server using `GetWorldName()`, so NA, EU, and other server families no longer share the same saved addon data.
+- Removed the old `/fpp sync` command, since sync is now part of the normal built-in FPP flow.
+- Consolidated sync into a single `LibGroupBroadcast` protocol now that the old helper-addon split is no longer part of the active install path.
+- Cleaned up the addon’s public Lua surface by routing module constructors and window actions through the main `FarmingPartyPlus` table instead of using several standalone global class names.
+- Centralized tracking status in `Startup.lua`, so the main addon controls whether tracking is enabled while member and loot modules focus on their own event handling.
+- Pricing now uses one shared helper across loot tracking, sync, recipe filtering, and stack tracking. This keeps value calculations consistent no matter where the price is being used.
 
 ### Fixed
-- Synced fishing/gutting updates now resolve reliably on other `FarmingPartyPlus` clients for stack replay, processed fish subtraction, and `Fish` / `Perfect Roe` outputs.
-- Solo host rows no longer gray out as if they were offline when you are not grouped.
-- Best-item hover tooltips now ignore plain-text fallback names instead of trying to open malformed ESO item links.
-- Removed redundant slash-command registration during startup and initialization.
-- Missing market pricing addons no longer risk breaking value lookups when a preferred source is selected, because unavailable sources are skipped automatically at runtime.
-- Loot history now ignores zero-quantity no-op entries instead of printing bogus lines like `x0 - 0.00g`.
-- Remote gutting outputs for `Fish` and `Perfect Roe` now resolve through stable local canonical links, so whitelist checks, pricing, and price-source labels stay aligned on receiving clients.
+
+- The `Logs` whitelist category now uses the raw wood node-drop names, such as `Rough Maple` and `Rough Ruby Ash`, so it matches what players actually loot from wood nodes.
+- Synced fishing and gutting updates now resolve more reliably on other `FarmingPartyPlus` clients, including stack replay, processed fish subtraction, `Fish`, and `Perfect Roe`.
+- Solo host rows no longer appear grayed out like the player is offline when you are not in a group.
+- Best-item hover tooltips now ignore plain-text fallback names instead of trying to treat them like ESO item links.
+- Removed redundant slash-command registration during startup.
+- Missing market-pricing addons no longer risk breaking value lookups when a preferred source is selected. Unavailable sources are now skipped automatically at runtime.
+- Loot history now ignores zero-quantity no-op entries instead of printing bad lines like `x0 - 0.00g`.
+- Remote gutting outputs for `Fish` and `Perfect Roe` now resolve through stable local item links, so whitelist checks, pricing, and price-source labels stay consistent on receiving clients.
 
 ## [3.0.6] - 2026-06-04
 ### Changed

@@ -1,268 +1,261 @@
-![Farming Party Plus Banner](fpp.png)
+<p align="center">
+  <img src="https://i.imgur.com/r4HXQaC.png" alt="Farming Party Plus Banner">
+</p>
 
-# Farming Party Plus
+<h1 align="center">Farming Party Plus</h1>
 
-`Farming Party Plus` is an Elder Scrolls Online addon for tracking party farming loot with a cleaner focus on node runs, material filtering, and host-side event tracking.
+<p align="center">
+  Cleaner farming, fishing, and loot tracking for <strong>Elder Scrolls Online</strong>
+</p>
 
-It is designed for players who want to run organized farming groups without cluttering the totals with junk gear, white trash drops, or low-priority materials.
+<p align="center">
+  <a href="https://github.com/DeviousCode/FarmingPartyPlus"><strong>GitHub Repository</strong></a>
+</p>
 
-## What It Does
+---
 
-- Tracks loot for you and your group from one host client
-- Supports a material whitelist for node farming
-- Lets you toggle exactly which materials count
-- Shows tracked loot in a scoreboard window and item breakdown window
-- Logs loot to chat and the loot window
-- Can send and receive its own built-in fishing/gutting sync when `LibGroupBroadcast` is installed
-- Supports fishing-session gutting flows, including processed fish subtraction and `Fish` / `Perfect Roe` outputs
-- Shows explicit `Stack Found` history lines when a later catch causes an already-held common-fish stack to be claimed into the session total
-- Supports saved whitelist profiles and recipe value filtering
+## About
+
+**Farming Party Plus** is an ESO addon made for organized farming groups, guild events, fishing runs, and money-making sessions where you want a clean scoreboard instead of a wall of random drops.
+
+The goal is simple: track the loot your group actually cares about.
+
+Instead of relying only on item quality, **Farming Party Plus** lets you choose what counts for the run, save those setups, and reuse them later.
+
+---
+
+## Required Libraries
+
+* [LibAddonMenu-2.0](https://www.esoui.com/downloads/info7-LibAddonMenu-2.0.html)
+* [LibAsync](https://www.esoui.com/downloads/info2125-LibAsync.html)
+* [LibPrice](https://www.esoui.com/downloads/info2204-LibPrice.html)
+
+---
+
+## Optional Library
+
+* [LibGroupBroadcast](https://www.esoui.com/downloads/info1337-LibGroupBroadcast.html)
+
+**LibGroupBroadcast** is only needed for fishing and gutting sync.
+
+For sync to work, the other players also need:
+
+* **Farming Party Plus**
+* [LibGroupBroadcast](https://www.esoui.com/downloads/info1337-LibGroupBroadcast.html)
+
+Without LibGroupBroadcast, **Farming Party Plus** still works normally for standard loot tracking.
+
+---
 
 ## Main Features
 
-### Node Farming Whitelist
+* Tracks your own loot and group loot
+* Shows a live farming scoreboard
+* Shows per-player item breakdowns
+* Logs loot to chat and the loot history window
+* Supports whitelist mode for focused farming events
+* Supports saved whitelist profiles across characters
+* Supports recipe value filtering
+* Supports market pricing through LibPrice
+* Supports fishing and gutting tracking
+* Can sync fishing and gutting state between clients when the other players also have Farming Party Plus and LibGroupBroadcast installed
 
-Whitelist mode is the core feature of `Farming Party Plus`.
+---
 
-Instead of tracking loot only by item quality, you can choose exactly what counts. This is useful for:
+## Whitelist Mode
 
-- ore runs
-- wood runs
-- cloth runs
-- jewelry dust runs
-- alchemy mat runs
-- enchanting rune runs
-- provisioning ingredient runs
-- furnishing mat runs
-- fishing runs
+Whitelist mode is the main feature for organized farming groups.
 
-When whitelist mode is enabled, only the items you turn on will count.
+Instead of counting every item above a certain quality, you decide exactly which items count.
 
-### Category-Based Filtering
+This is useful for:
 
-The whitelist window groups items into clear sections so it is easy to build a custom farm profile:
+* Ore runs
+* Wood runs
+* Cloth and leather runs
+* Jewelry dust runs
+* Alchemy routes
+* Provisioning routes
+* Furnishing material runs
+* Fishing events
+* Recipe farming
 
-- `Ore`
-- `Logs`
-- `Cloth & Leather`
-- `Jewelry Dust`
-- `Alchemy`
-- `Enchanting`
-- `Provisioning`
-- `Fishing`
-- `Furnishing Mats`
+> When whitelist mode is enabled, only enabled items are counted.
 
-Each category supports:
+---
 
-- individual item toggles
-- `All On`
-- `All Off`
+## Whitelist Categories
 
-The `Logs` category matches the raw wood materials you actually loot from nodes, such as `Rough Maple` and `Rough Ruby Ash`, instead of the refined crafting materials.
+The whitelist window includes:
 
-### Saved Whitelist Profiles
+* Ore
+* Logs
+* Cloth & Leather
+* Jewelry Dust
+* Alchemy
+* Enchanting
+* Provisioning
+* Fishing
+* Furnishing Mats
+* Recipes
 
-Whitelist setups can be saved account-wide as reusable profiles.
+Each category supports individual item toggles, plus quick **All On** and **All Off** options.
 
-This is useful if you switch between different group money runs such as:
+The **Logs** category uses the actual raw wood node drops, such as **Rough Maple** and **Rough Ruby Ash**, so it matches what players actually loot.
 
-- fishing events
-- ore routes
-- furnishing mat runs
-- recipe-focused node routes
+---
+
+## Saved Whitelist Profiles
+
+Whitelist setups can be saved and reused across characters.
+
+This is helpful if your group swaps between different event types, such as fishing one night, ore farming another night, and furnishing material farming later.
 
 Profiles can be:
 
-- named
-- saved
-- loaded from any character
-- deleted later if no longer needed
+* Saved
+* Loaded
+* Updated
+* Deleted
 
-Main addon settings are also stored account-wide, so whitelist choices, profiles, and related configuration no longer drift between characters on the same account.
+If you are updating from an older version, it is a good idea to review your saved whitelist profiles and re-save them if anything looks outdated.
 
-### Recipe Value Filtering
+---
 
-Whitelist mode also includes a `Recipes` rule.
+## Pricing Support
 
-When enabled, recipes are only tracked if they meet the configurable minimum value threshold. This keeps low-value recipes out of money-focused event totals while still allowing valuable recipes from nodes to count.
+**Farming Party Plus** can use market data through **LibPrice**.
 
-By default:
+Supported market sources include:
 
-- recipe tracking is off
-- the minimum recipe value starts at `3000g`
+* **Tamriel Trade Centre** by cyxui — **TTC**
+* **Master Merchant** by Khaibit, Philgo68, and Sharlikran — **MM**
+* **Arkadius' Trade Tools** by Arkadius, Verbalinkontinenz, and Aldanga — **ATT**
 
-### Price Source Priority
+You can choose a preferred price source:
 
-`Farming Party Plus` can now prefer a specific market source when multiple pricing addons are available through `LibPrice`.
+* Auto
+* TTC
+* MM
+* ATT
 
-You can choose:
+When set to **Auto**, Farming Party Plus checks available sources in this order:
 
-- `Auto`
-- `TTC`
-- `MM`
-- `ATT`
+```text
+TTC -> MM -> ATT -> Vendor
+```
 
-Behavior:
+If your chosen price source is not available, Farming Party Plus will use the next source it can find, with vendor value as the backup.
 
-- `Auto` uses `TTC -> MM -> ATT`
-- if a selected market source is missing or has no data, it is skipped automatically
-- vendor value is always the final fallback
+Loot history can also show where a price came from, using labels like **TTC**, **MM**, **ATT**, or **Vendor**.
 
-This keeps totals stable even if a preferred market addon is not installed on a given client.
+This only affects how prices are shown in chat and loot history.
 
-### Loot History Price Source Labels
+---
 
-If you want more detail in chat or in the loot history window, you can also turn on a setting to show where the displayed price came from.
+## Fishing And Gutting
 
-When enabled, loot-history lines can append:
-
-- `TTC`
-- `MM`
-- `ATT`
-- `Vendor`
-
-This only affects loot history display. It does not change scoreboard totals or item breakdown totals.
-
-### Standard Tracking Mode
-
-If whitelist mode is turned off, the addon falls back to the more traditional tracking model:
-
-- minimum item quality
-- gear on or off
-- motifs on or off
-- self loot on or off
-- group loot on or off
-
-While whitelist mode is enabled, `Minimum Item Quality` is not used and is disabled in the settings panel to avoid cross-character or cross-client confusion during whitelist-driven events.
-
-### Fishing And Gutting Sessions
-
-`Farming Party Plus` now supports fishing sessions more directly.
+**Farming Party Plus** includes extra support for fishing and gutting sessions.
 
 It can:
 
-- count caught fish
-- show when a previously held stack was folded into the session total
-- subtract processed fish from the scoreboard
-- count `Fish`
-- count `Perfect Roe`
-- warn when ESO `Auto-Add to Craft Bag` would interfere with tracked fishing outputs
+* Track caught fish
+* Show stack-found history
+* Subtract processed fish from totals
+* Count Fish
+* Count Perfect Roe
+* Warn when ESO’s Auto-Add to Craft Bag may interfere with tracked fishing outputs
 
-This makes it better suited for guild fishing events where processed items are part of the total payout picture.
+---
 
-It also now supports stack-aware fishing sync recovery for other `FarmingPartyPlus` clients, so if another client resets and you later catch another fish into the same tracked stack, the receiver can rebuild the correct stack-backed total instead of only seeing the new `+1`.
+## Fishing And Gutting Sync
 
-For remote gutting outputs, `Fish` and `Perfect Roe` are resolved through stable local canonical links on the receiving client, so whitelist matching, pricing, and displayed price-source labels stay consistent across clients.
+Fishing and gutting sync requires **Farming Party Plus** and **LibGroupBroadcast** on the players taking part in the sync.
 
-The member scoreboard also distinguishes live state more clearly during events:
+Other players catching fish can still appear through normal group loot.
 
-- a green `H` marks the local `FarmingPartyPlus` host row
-- helper-active members keep a `*`
-- offline grouped characters gray out instead of looking fully active
+The sync feature is for the extra fishing-session details that happen after the catch, especially when fish are processed or gutted.
 
-## Installation
+Sync can help with:
 
-### Main Addon
+* Processed fish subtraction
+* Fish
+* Perfect Roe
+* Stack replay after reset or late join
+* Keeping fishing totals better aligned between clients
 
-Install this folder into your ESO addons directory:
+Remote Fish and Perfect Roe outputs are resolved locally on each receiving client, so pricing, whitelist checks, and loot-history lines stay consistent.
 
-- `FarmingPartyPlus`
+If another player is not running **Farming Party Plus** with **LibGroupBroadcast**, you can still see their caught fish, but their processing results will not sync. That means you will not see what they received from gutting, such as **Fish** or **Perfect Roe**, through Farming Party Plus sync.
 
-Typical path:
-
-- `Documents\Elder Scrolls Online\live\AddOns\FarmingPartyPlus`
-
-### Required Libraries
-
-`Farming Party Plus` expects these libraries:
-
-- `LibAddonMenu-2.0`
-- `LibAsync`
-- `LibPrice`
-
-### Fishing Sync Library
-
-If you want multi-client fishing/gutting sync, install:
-
-- `LibGroupBroadcast` `>=95`
-
-`LibGroupBroadcast` is not required for normal `FarmingPartyPlus` use. It is only needed for the built-in fishing/gutting sync path:
-
-- processed fish subtraction
-- `Fish`
-- `Perfect Roe`
-- touched fish-stack replay after reset or late join
-- blue trash fish that are easier to reconstruct locally than remotely
-
-The built-in sync path now uses a single `LibGroupBroadcast` protocol owned by `FarmingPartyPlus`, rather than the older split helper flow.
+---
 
 ## Commands
 
-### Main Commands
+| Command              | Description                             |
+| -------------------- | --------------------------------------- |
+| `/fpp`               | Toggle the main scoreboard window       |
+| `/fpp start`         | Start tracking                          |
+| `/fpp stop`          | Stop tracking                           |
+| `/fpp toggle`        | Toggle tracking on or off               |
+| `/fpp status`        | Show current tracking state             |
+| `/fpp reset`         | Reset all tracked loot data             |
+| `/fpp update`        | Refresh party members                   |
+| `/fpp filters`       | Open the whitelist window               |
+| `/fpp loot`          | Toggle the loot history window          |
+| `/fpp log`           | Toggle the loot history window          |
+| `/fpploot`           | Toggle the loot history window          |
+| `/fpp compact`       | Toggle compact scoreboard mode          |
+| `/fpp whitelist on`  | Enable whitelist mode                   |
+| `/fpp whitelist off` | Disable whitelist mode                  |
+| `/fppc`              | Output current scores to the chat input |
+| `/fpphelp`           | Print command help                      |
+| `/fp`                | Legacy alias for `/fpp`                 |
+| `/fpc`               | Legacy alias for `/fppc`                |
 
-| Command | Description |
-| --- | --- |
-| `/fpp` | Toggle the main member scoreboard window |
-| `/fpp reset` | Reset all tracked loot data |
-| `/fpp start` | Start tracking |
-| `/fpp stop` | Stop tracking |
-| `/fpp status` | Show current tracking state |
-| `/fpp update` | Refresh party members |
-| `/fpp filters` | Open the whitelist window |
-| `/fpp loot` | Toggle the loot history window |
-| `/fpp log` | Toggle the loot history window |
-| `/fpp whitelist on` | Enable whitelist mode |
-| `/fpp whitelist off` | Disable whitelist mode |
-| `/fppc` | Output current scores to the chat input |
-| `/fpphelp` | Print command help |
-| `/fpploot` | Toggle the loot history window |
-| `/fp` | Legacy alias for `/fpp` |
-| `/fpc` | Legacy alias for `/fppc` |
+---
 
-## Recommended Use
+## Installation
 
-### For a Farming Party Host
+Install the addon folder here:
 
-Use `FarmingPartyPlus` if you are the player running the event and want:
+```text
+Documents\Elder Scrolls Online\live\AddOns\FarmingPartyPlus
+```
 
-- the scoreboard
-- the loot windows
-- whitelist filtering
-- chat output
-- host-side tracking
+The folder should be named:
 
-### For a Simple One-Client Setup
+```text
+FarmingPartyPlus
+```
 
-You only need:
+---
 
-- `FarmingPartyPlus`
+## Updating From Older Versions
 
-This is the standard setup.
+If you are updating from an older build:
 
-### For Multi-Client Fishing/Gutting Sync
+* Reload the UI after updating
+* Review older saved whitelist profiles
+* Re-save profiles if old entries do not match what you expect
 
-Use:
+You should only need to delete SavedVariables as a last resort.
 
-- `FarmingPartyPlus` on every participating client
-- `LibGroupBroadcast` on every client that should contribute fishing/gutting sync
-
-### Sync Indicators
-
-The members window also shows whether your client has observed built-in fishing/gutting sync traffic from a party member.
-
-This helps confirm that another `FarmingPartyPlus` client is actually talking to the host during event testing.
+---
 
 ## Notes
 
-- Saved variables update on `/reloadui`, logout, or exit
-- Group loot tracking depends on what the ESO API exposes to the host client
-- Some actions are easier to see locally than remotely, which is why the built-in fishing/gutting sync path exists
-- Gear and motif filters still apply when whitelist mode is active
-- Loot history can be shown or hidden independently of chat logging through the keybind or loot-window commands
-- Fishing outputs can be affected by ESO `Auto-Add to Craft Bag`, so the addon warns when that setting would interfere with tracked fishing results
+* Minimum Item Quality is only used when whitelist mode is off
+* Whitelist mode ignores the minimum item quality setting
+* Fishing outputs can be affected by ESO’s Auto-Add to Craft Bag setting
+* The addon warns about Auto-Add to Craft Bag during fishing and gutting sessions
+* Loot history can be shown separately from chat logging
+* Group loot tracking depends on what the ESO API exposes to the host client
+
+---
 
 ## Credits
 
-Originally based on `Farming Party`, which was originally based on `Group Loot` by Temeez.
+Originally based on [Farming Party](https://www.esoui.com/downloads/info1822-FarmingParty.html), which was originally based on [Group Loot](https://www.esoui.com/downloads/info1027-GroupLoot.html) by Temeez.
 
-Pricing support is intended to work with libraries and tools commonly used by ESO trading addons.
+Pricing support is intended to work with the ESO trading libraries commonly used by market addons.
