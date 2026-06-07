@@ -7,7 +7,7 @@
 ## Author: DeviousCode
 ## Version: 3.0.7
 ## AddOnVersion: 30007
-## APIVersion: 101048 101049
+## APIVersion: 101049 101050
 ## DependsOn: LibAddonMenu-2.0 LibAsync LibPrice
 ## OptionalDependsOn: LibGroupBroadcast>=95
 ## SavedVariables: FarmingPartyPlusMemberList_db FarmingPartyPlusSettings_db
