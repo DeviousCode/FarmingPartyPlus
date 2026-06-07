@@ -9,8 +9,8 @@ local entries = {
   { code = 6, key = 'trophy fish', name = 'Trophy Fish', quality = ITEM_QUALITY_MAGIC, kind = 'common_fish' },
   { code = 7, key = 'salmon', name = 'Salmon', quality = ITEM_QUALITY_NORMAL, kind = 'common_fish' },
   { code = 8, key = 'river clariid', name = 'River Clariid', quality = ITEM_QUALITY_NORMAL, kind = 'common_fish' },
-  { code = 9, key = 'fish', name = 'Fish', quality = ITEM_QUALITY_NORMAL, kind = 'output' },
-  { code = 10, key = 'perfect roe', name = 'Perfect Roe', quality = ITEM_QUALITY_LEGENDARY, kind = 'output' }
+  { code = 9, key = 'fish', name = 'Fish', quality = ITEM_QUALITY_NORMAL, kind = 'output', canonicalLink = "|H0:item:33753:25:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h" },
+  { code = 10, key = 'perfect roe', name = 'Perfect Roe', quality = ITEM_QUALITY_LEGENDARY, kind = 'output', canonicalLink = "|H0:item:64222:29:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0|h|h" }
 }
 
 local byCode = {}
@@ -36,3 +36,7 @@ function FarmingPartyPlusFishingSyncLookup:GetCodeByNormalizedName(normalizedNam
   return entry ~= nil and entry.code or 0
 end
 
+function FarmingPartyPlusFishingSyncLookup:GetCanonicalLinkByCode(code)
+  local entry = self:GetByCode(code)
+  return entry ~= nil and entry.canonicalLink or nil
+end

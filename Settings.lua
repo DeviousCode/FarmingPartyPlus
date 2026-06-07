@@ -110,6 +110,7 @@ function SettingsClass:Initialize()
     displayOwnLoot = true,
     displayGroupLoot = true,
     displayLootValue = true,
+    displayLootPriceSource = false,
     manualHighscoreReset = true,
     preferredPriceSource = FarmingPartyPlus.Price.SOURCE_AUTO,
     lootWhitelist = BuildWhitelistDefaults(),
@@ -415,6 +416,18 @@ function SettingsClass:Initialize()
     },
     {
       type = 'checkbox',
+      name = 'Display price source in loot history',
+      tooltip = 'Append TTC, MM, ATT, or Vendor after the gold value in chat and loot history lines.',
+      getFunc = function()
+        return self:DisplayLootPriceSource()
+      end,
+      setFunc = function(value)
+        self:ToggleLootPriceSource(value)
+      end,
+      width = 'full'
+    },
+    {
+      type = 'checkbox',
       name = 'Log to chat',
       tooltip = 'Show or hide loot on chat.',
       getFunc = function()
@@ -688,6 +701,10 @@ end
 
 function SettingsClass:DisplayLootValue()
   return self.settings.displayLootValue
+end
+
+function SettingsClass:DisplayLootPriceSource()
+  return self.settings.displayLootPriceSource == true
 end
 
 function SettingsClass:ChatPrefix()
@@ -978,6 +995,10 @@ end
 
 function SettingsClass:ToggleLootValue(value)
   self.settings.displayLootValue = value
+end
+
+function SettingsClass:ToggleLootPriceSource(value)
+  self.settings.displayLootPriceSource = value == true
 end
 
 function SettingsClass:ToggleStatusValue(value)

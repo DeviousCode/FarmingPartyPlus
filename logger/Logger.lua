@@ -38,14 +38,18 @@ local function CreateTimestamp()
   return zo_strformat('|cFFFFFF<<1>>|r', timestamp:gsub('%a+', replace))
 end
 
-local function BuildItemText(itemLink, quantity, totalValue, lootType)
+local function BuildItemText(itemLink, quantity, totalValue, lootType, priceSourceLabel)
   local icon = GetItemIcon(itemLink, lootType)
   local displayQuantity = math.abs(quantity)
   local displayTotalValue = math.abs(totalValue)
   local valueColor = quantity < 0 and 'FF5555' or 'FFFFFF'
-  local itemValueText = FarmingPartyPlus.Settings:DisplayLootValue()
-      and zo_strformat(' - |c' .. valueColor .. '<<1>>|r|t16:16:EsoUI/Art/currency/currency_gold.dds|t', FarmingPartyPlus.FormatNumber(displayTotalValue))
-      or ''
+  local itemValueText = ''
+  if FarmingPartyPlus.Settings:DisplayLootValue() then
+    itemValueText = zo_strformat(' - |c' .. valueColor .. '<<1>>|r|t16:16:EsoUI/Art/currency/currency_gold.dds|t', FarmingPartyPlus.FormatNumber(displayTotalValue))
+    if FarmingPartyPlus.Settings:DisplayLootPriceSource() and priceSourceLabel ~= nil and priceSourceLabel ~= '' then
+      itemValueText = itemValueText .. ' - ' .. priceSourceLabel
+    end
+  end
   local itemText
 
   if displayQuantity == 1 then
@@ -66,8 +70,12 @@ local function EmitLootMessage(lootMessage)
   FarmingPartyPlusWindowBuffer:AddMessage(timestamp .. ' ' .. lootMessage, 255, 255, 0, 1)
 end
 
-function Logger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
-  local itemText = BuildItemText(itemLink, quantity, totalValue, lootType)
+function Logger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType, priceSourceLabel)
+  if tonumber(quantity) == nil or tonumber(quantity) == 0 then
+    return
+  end
+
+  local itemText = BuildItemText(itemLink, quantity, totalValue, lootType, priceSourceLabel)
 
   local lootMessage
   if quantity < 0 then
@@ -97,8 +105,12 @@ function Logger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, tota
   EmitLootMessage(lootMessage)
 end
 
-function Logger:LogStackFound(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
-  local itemText = BuildItemText(itemLink, quantity, totalValue, lootType)
+function Logger:LogStackFound(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType, priceSourceLabel)
+  if tonumber(quantity) == nil or tonumber(quantity) <= 0 then
+    return
+  end
+
+  local itemText = BuildItemText(itemLink, quantity, totalValue, lootType, priceSourceLabel)
   local lootMessage
 
   if not lootedByPlayer then

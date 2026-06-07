@@ -41,7 +41,17 @@ local function ResolveKnownItemLink(itemCode, fallbackLink)
   if itemCode > 0 and knownFishingLinksByCode[itemCode] ~= nil then
     return knownFishingLinksByCode[itemCode]
   end
+  local canonicalLink = FarmingPartyPlusFishingSyncLookup:GetCanonicalLinkByCode(itemCode)
+  if canonicalLink ~= nil and canonicalLink ~= '' then
+    return canonicalLink
+  end
   return fallbackLink or ''
+end
+
+local function GetPriceDetails(itemLink)
+  local itemValue, priceSourceKey = Price.GetItemPrice(itemLink)
+  local priceSourceLabel = Price.GetHistorySourceLabel(priceSourceKey)
+  return itemValue, priceSourceKey, priceSourceLabel
 end
 
 local function BuildBagSlotKey(bagId, slotIndex)
@@ -302,14 +312,21 @@ local function ResolveSyncedTrackedItem(data)
     data.itemName = itemName
   end
   local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
-  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and Price.GetItemPrice(itemLink)) or (tonumber(data.itemValue) or 0)
-  return trackedItem, resolvedItemValue
+  local resolvedItemValue, priceSourceKey, priceSourceLabel
+  if itemLink ~= nil and itemLink ~= '' then
+    resolvedItemValue, priceSourceKey, priceSourceLabel = GetPriceDetails(itemLink)
+  else
+    resolvedItemValue = tonumber(data.itemValue) or 0
+    priceSourceKey = 'npc'
+    priceSourceLabel = Price.GetHistorySourceLabel(priceSourceKey)
+  end
+  return trackedItem, resolvedItemValue, priceSourceKey, priceSourceLabel
 end
 
-local function LogSyncedLoot(displayName, trackedItem, quantity, itemValue, lootType)
+local function LogSyncedLoot(displayName, trackedItem, quantity, itemValue, lootType, priceSourceLabel)
   local absoluteQuantity = math.abs(quantity)
   local totalValue = itemValue * absoluteQuantity
-  Logger:LogLootItem(displayName, false, trackedItem, quantity, totalValue, lootType or 0)
+  Logger:LogLootItem(displayName, false, trackedItem, quantity, totalValue, lootType or 0, priceSourceLabel)
 end
 
 function Loot:PassesBaseExclusions(itemLink)
@@ -425,12 +442,15 @@ function Loot:RememberLocalFishSlot(bagId, slotIndex)
     RemoveIndexedSlotKey(trackedLocalFishSlotKeysByItemName, existingTrackedSlot.itemName, slotKey)
   end
 
+  local itemValue, priceSourceKey, priceSourceLabel = GetPriceDetails(itemLink)
   trackedLocalFishSlots[slotKey] = {
     bagId = bagId,
     slotIndex = slotIndex,
     itemName = normalizedItemName,
     itemLink = itemLink,
-    itemValue = Price.GetItemPrice(itemLink),
+    itemValue = itemValue,
+    priceSourceKey = priceSourceKey,
+    priceSourceLabel = priceSourceLabel,
     stackCount = GetSlotStackSize(bagId, slotIndex),
     claimedCount = preservedClaimedCount
   }
@@ -464,7 +484,7 @@ function Loot:ClaimLocalFishSlotForSession(normalizedItemName, caughtQuantity)
 
         if claimDelta > 0 and Members:HasMember(playerName) then
           self:AddNewLootedItem(playerName, trackedSlot.itemLink, trackedSlot.itemValue, claimDelta)
-          Logger:LogStackFound(GetDisplayName('player'), true, trackedSlot.itemLink, claimDelta, trackedSlot.itemValue * claimDelta, LOOT_TYPE_ITEM)
+          Logger:LogStackFound(GetDisplayName('player'), true, trackedSlot.itemLink, claimDelta, trackedSlot.itemValue * claimDelta, LOOT_TYPE_ITEM, trackedSlot.priceSourceLabel)
         end
         trackedSlot.claimedCount = currentStackCount
       end
@@ -495,7 +515,7 @@ function Loot:OnItemLooted(eventCode, name, itemLink, quantity, itemSound, lootT
     recentLocalGuttingOutputs[eventKey] = GetTimeStamp()
   end
 
-  local itemValue = Price.GetItemPrice(itemLink)
+  local itemValue, _, priceSourceLabel = GetPriceDetails(itemLink)
   local totalValue = itemValue * quantity
   local memberKey, looterMember = GetMember(name, lootedByPlayer)
 
@@ -510,7 +530,7 @@ function Loot:OnItemLooted(eventCode, name, itemLink, quantity, itemSound, lootT
 
   RecordNativeLoot(observedDisplayName, itemLink, quantity, lootType)
   self:AddNewLootedItem(memberKey, itemLink, itemValue, quantity)
-  Logger:LogLootItem(looterMember.displayName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+  Logger:LogLootItem(looterMember.displayName, lootedByPlayer, itemLink, quantity, totalValue, lootType, priceSourceLabel)
 
   if lootedByPlayer and IsGuttableFishItem(itemLink) then
     self:ClaimLocalFishSlotForSession(normalizedItemName, quantity)
@@ -531,7 +551,7 @@ function Loot:OnSyncedLootReceived(data, unitTag)
   end
 
   local quantity = tonumber(data.quantity) or 1
-  local trackedItem, resolvedItemValue = ResolveSyncedTrackedItem(data)
+  local trackedItem, resolvedItemValue, resolvedPriceSourceKey, resolvedPriceSourceLabel = ResolveSyncedTrackedItem(data)
   local syncKind = tonumber(data.syncKind) or SYNC_KIND_DELTA
   if type(trackedItem) == 'string' and zo_plainstrfind(trackedItem, '|H') == 1 then
     RememberKnownItemLink(trackedItem)
@@ -545,18 +565,20 @@ function Loot:OnSyncedLootReceived(data, unitTag)
     self:ApplySyncedFishStackState(memberKey, trackedItem, resolvedItemValue, quantity, data)
     return
   elseif syncKind == SYNC_KIND_FISH_STACK_DELTA then
+    data.priceSourceKey = resolvedPriceSourceKey
+    data.priceSourceLabel = resolvedPriceSourceLabel
     self:AdjustLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
     self:RememberSyncedFishSlot(memberKey, trackedItem, resolvedItemValue, data)
-    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType)
+    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType, resolvedPriceSourceLabel)
     return
   end
 
   if quantity > 0 then
     self:AddNewLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
-    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType)
+    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType, resolvedPriceSourceLabel)
   else
     self:AdjustLootedItem(memberKey, trackedItem, resolvedItemValue, quantity)
-    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType)
+    LogSyncedLoot(looterMember.displayName, trackedItem, quantity, resolvedItemValue, data.lootType, resolvedPriceSourceLabel)
   end
 end
 
@@ -591,6 +613,8 @@ function Loot:RememberSyncedFishSlot(memberKey, itemLink, itemValue, data)
   memberSlots[slotKey] = {
     itemLink = itemLink,
     itemValue = itemValue,
+    priceSourceKey = data.priceSourceKey,
+    priceSourceLabel = data.priceSourceLabel,
     claimedCount = claimedCount
   }
 end
@@ -613,7 +637,7 @@ function Loot:ApplySyncedFishStackState(memberKey, itemLink, itemValue, caughtQu
     self:AddNewLootedItem(memberKey, itemLink, itemValue, correctionDelta)
     local looterMember = Members:GetMember(memberKey)
     if looterMember ~= nil then
-      Logger:LogStackFound(looterMember.displayName, false, itemLink, correctionDelta, itemValue * correctionDelta, data.lootType or LOOT_TYPE_ITEM)
+      Logger:LogStackFound(looterMember.displayName, false, itemLink, correctionDelta, itemValue * correctionDelta, data.lootType or LOOT_TYPE_ITEM, data.priceSourceLabel)
     end
   elseif correctionDelta < 0 then
     self:AdjustLootedItem(memberKey, itemLink, itemValue, correctionDelta)
@@ -658,7 +682,7 @@ function Loot:OnInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem, ite
   if trackedSlot ~= nil and countDelta < 0 and Members:HasMember(playerName) then
     local quantityRemoved = math.min(math.abs(countDelta), trackedSlot.claimedCount or math.abs(countDelta))
     self:AdjustLootedItem(playerName, trackedSlot.itemLink, trackedSlot.itemValue, -quantityRemoved)
-    Logger:LogLootItem(GetDisplayName(), true, trackedSlot.itemLink, -quantityRemoved, trackedSlot.itemValue * quantityRemoved, LOOT_TYPE_ITEM)
+    Logger:LogLootItem(GetDisplayName(), true, trackedSlot.itemLink, -quantityRemoved, trackedSlot.itemValue * quantityRemoved, LOOT_TYPE_ITEM, trackedSlot.priceSourceLabel)
     trackedSlot.stackCount = math.max((trackedSlot.stackCount or 0) - quantityRemoved, 0)
     trackedSlot.claimedCount = math.max((trackedSlot.claimedCount or 0) - quantityRemoved, 0)
     if trackedSlot.claimedCount == 0 then
@@ -679,9 +703,9 @@ function Loot:OnInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem, ite
           self:RememberLocalFishSlot(bagId, slotIndex)
           return
         end
-      local itemValue = Price.GetItemPrice(itemLink)
+        local itemValue, _, priceSourceLabel = GetPriceDetails(itemLink)
         self:AddNewLootedItem(playerName, itemLink, itemValue, countDelta)
-        Logger:LogLootItem(GetDisplayName('player'), true, itemLink, countDelta, itemValue * countDelta, LOOT_TYPE_ITEM)
+        Logger:LogLootItem(GetDisplayName('player'), true, itemLink, countDelta, itemValue * countDelta, LOOT_TYPE_ITEM, priceSourceLabel)
       end
     end
   end

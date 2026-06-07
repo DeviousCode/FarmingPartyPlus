@@ -58,6 +58,8 @@ Each category supports:
 - `All On`
 - `All Off`
 
+The `Logs` category matches the raw wood materials you actually loot from nodes, such as `Rough Maple` and `Rough Ruby Ash`, instead of the refined crafting materials.
+
 ### Saved Whitelist Profiles
 
 Whitelist setups can be saved account-wide as reusable profiles.
@@ -108,6 +110,19 @@ Behavior:
 
 This keeps totals stable even if a preferred market addon is not installed on a given client.
 
+### Loot History Price Source Labels
+
+If you want more detail in chat or in the loot history window, you can also turn on a setting to show where the displayed price came from.
+
+When enabled, loot-history lines can append:
+
+- `TTC`
+- `MM`
+- `ATT`
+- `Vendor`
+
+This only affects loot history display. It does not change scoreboard totals or item breakdown totals.
+
 ### Standard Tracking Mode
 
 If whitelist mode is turned off, the addon falls back to the more traditional tracking model:
@@ -136,6 +151,8 @@ It can:
 This makes it better suited for guild fishing events where processed items are part of the total payout picture.
 
 It also now supports stack-aware fishing sync recovery for other `FarmingPartyPlus` clients, so if another client resets and you later catch another fish into the same tracked stack, the receiver can rebuild the correct stack-backed total instead of only seeing the new `+1`.
+
+For remote gutting outputs, `Fish` and `Perfect Roe` are resolved through stable local canonical links on the receiving client, so whitelist matching, pricing, and displayed price-source labels stay consistent across clients.
 
 The member scoreboard also distinguishes live state more clearly during events:
 

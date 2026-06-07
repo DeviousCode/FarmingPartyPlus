@@ -6,6 +6,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 ### Added
 - `FarmingPartyPlus` now owns the local fishing/gutting sender path directly when `LibGroupBroadcast` is installed, so the main addon can contribute sync without relying on the separate helper addon.
 - Added a preferred market price source setting so users can choose `Auto`, `TTC`, `MM`, or `ATT` while always keeping vendor value as the final fallback.
+- Added an optional loot-history display setting to append the active price source label (`TTC`, `MM`, `ATT`, or `Vendor`) after the gold value in chat and loot window lines.
 
 ### Changed
 - The recommended install flow now treats `FarmingPartyPlus` as the normal one-addon path for both sending and receiving fishing/gutting sync.
@@ -17,6 +18,7 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Reduced the addon’s public Lua surface by routing module constructors and window actions through the main `FarmingPartyPlus` table instead of a set of standalone global class names.
 - Centralized tracking-status ownership in `Startup.lua` so the top-level addon controls enabled/disabled state while member and loot modules only manage their own event registrations.
 - Pricing now uses a shared addon helper for loot, sync, recipe filtering, and stack tracking so all value calculations follow the same market-source priority rules.
+- The `Logs` whitelist category now uses raw node-drop wood names like `Rough Maple` and `Rough Ruby Ash`, which match what players actually loot from wood nodes.
 
 ### Fixed
 - Synced fishing/gutting updates now resolve reliably on other `FarmingPartyPlus` clients for stack replay, processed fish subtraction, and `Fish` / `Perfect Roe` outputs.
@@ -24,6 +26,8 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 - Best-item hover tooltips now ignore plain-text fallback names instead of trying to open malformed ESO item links.
 - Removed redundant slash-command registration during startup and initialization.
 - Missing market pricing addons no longer risk breaking value lookups when a preferred source is selected, because unavailable sources are skipped automatically at runtime.
+- Loot history now ignores zero-quantity no-op entries instead of printing bogus lines like `x0 - 0.00g`.
+- Remote gutting outputs for `Fish` and `Perfect Roe` now resolve through stable local canonical links, so whitelist checks, pricing, and price-source labels stay aligned on receiving clients.
 
 ## [3.0.6] - 2026-06-04
 ### Changed

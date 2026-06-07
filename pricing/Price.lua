@@ -64,6 +64,19 @@ function Price.GetSourceLabel(sourceKey)
   return string.format('%s (not installed)', config.label)
 end
 
+function Price.GetHistorySourceLabel(sourceKey)
+  if sourceKey == nil or sourceKey == '' or sourceKey == 'npc' then
+    return 'Vendor'
+  end
+
+  local config = SOURCE_CONFIG[sourceKey]
+  if config ~= nil then
+    return config.label
+  end
+
+  return tostring(sourceKey)
+end
+
 function Price.GetSourceChoiceValues()
   return CHOICE_ORDER
 end
