@@ -8,7 +8,7 @@
 ## Version: 3.0.7
 ## AddOnVersion: 30007
 ## APIVersion: 101049 101050
-## DependsOn: LibAddonMenu-2.0 LibAsync LibPrice
+## DependsOn: LibAddonMenu-2.0>=43 LibAsync>=30102 LibPrice
 ## OptionalDependsOn: LibGroupBroadcast>=95
 ## SavedVariables: FarmingPartyPlusMemberList_db FarmingPartyPlusSettings_db
 
