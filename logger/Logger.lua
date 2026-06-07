@@ -1,6 +1,9 @@
-FarmingPartyPlusLogger = ZO_Object:Subclass()
+local Addon = FarmingPartyPlus
+local Logger = ZO_Object:Subclass()
 
-function FarmingPartyPlusLogger:Finalize()
+Addon.Classes.Logger = Logger
+
+function Logger:Finalize()
 end
 
 local function GetItemIcon(itemLink, lootType)
@@ -63,7 +66,7 @@ local function EmitLootMessage(lootMessage)
   FarmingPartyPlusWindowBuffer:AddMessage(timestamp .. ' ' .. lootMessage, 255, 255, 0, 1)
 end
 
-function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+function Logger:LogLootItem(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
   local itemText = BuildItemText(itemLink, quantity, totalValue, lootType)
 
   local lootMessage
@@ -94,7 +97,7 @@ function FarmingPartyPlusLogger:LogLootItem(looterName, lootedByPlayer, itemLink
   EmitLootMessage(lootMessage)
 end
 
-function FarmingPartyPlusLogger:LogStackFound(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
+function Logger:LogStackFound(looterName, lootedByPlayer, itemLink, quantity, totalValue, lootType)
   local itemText = BuildItemText(itemLink, quantity, totalValue, lootType)
   local lootMessage
 

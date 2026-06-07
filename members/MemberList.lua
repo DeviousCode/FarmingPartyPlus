@@ -27,6 +27,7 @@ local listContainer
 local members = {}
 local saveData = {}
 local Settings
+local Addon = FarmingPartyPlus
 
 local function CopyTable(source)
   if type(source) ~= 'table' then
@@ -50,15 +51,16 @@ local function FormatDisplayName(displayName)
   return '@' .. displayName
 end
 
-FarmingPartyPlusMemberList = ZO_Object:Subclass()
+local MemberList = ZO_Object:Subclass()
+Addon.Classes.MemberList = MemberList
 
-function FarmingPartyPlusMemberList:New()
+function MemberList:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
   return obj
 end
 
-function FarmingPartyPlusMemberList:Initialize()
+function MemberList:Initialize()
   local defaults = { members = {} }
   local legacySaveData = ZO_SavedVars:New('FarmingPartyPlusMemberList_db', RELEASE_COUNT, nil, defaults)
   saveData = ZO_SavedVars:New('FarmingPartyPlusMemberList_db', RELEASE_COUNT, WORLD_NAME, defaults)
@@ -69,7 +71,7 @@ function FarmingPartyPlusMemberList:Initialize()
     saveData.members = CopyTable(legacySaveData.members)
   end
 
-  FarmingPartyPlus.Modules.Members = FarmingPartyPlusMembers:New(saveData)
+  FarmingPartyPlus.Modules.Members = FarmingPartyPlus.Classes.Members:New(saveData)
   members = FarmingPartyPlus.Modules.Members
 
   listContainer = FarmingPartyPlusMembersWindow:GetNamedChild('List')
@@ -97,7 +99,7 @@ function FarmingPartyPlusMemberList:Initialize()
   members:RegisterCallback('OnKeysUpdated', self.UpdateScrollList)
 end
 
-function FarmingPartyPlusMemberList:AddEventHandlers()
+function MemberList:AddEventHandlers()
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_JOINED, function(...)
     self:OnMemberJoined(...)
   end)
@@ -110,18 +112,16 @@ function FarmingPartyPlusMemberList:AddEventHandlers()
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_GROUP_UPDATE, function(...)
     self:RefreshOnlineStates()
   end)
-  Settings:ToggleStatusValue(Settings.TRACKING_STATUS.ENABLED)
 end
 
-function FarmingPartyPlusMemberList:RemoveEventHandlers()
+function MemberList:RemoveEventHandlers()
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_JOINED)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_LEFT)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_MEMBER_CONNECTED_STATUS)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_GROUP_UPDATE)
-  Settings:ToggleStatusValue(Settings.TRACKING_STATUS.DISABLED)
 end
 
-function FarmingPartyPlusMemberList:Finalize()
+function MemberList:Finalize()
   Settings:Window().positionLeft = FarmingPartyPlusMembersWindow:GetLeft()
   Settings:Window().positionTop = FarmingPartyPlusMembersWindow:GetTop()
   Settings:Window().width = FarmingPartyPlusMembersWindow:GetWidth()
@@ -130,21 +130,21 @@ function FarmingPartyPlusMemberList:Finalize()
   saveData.members = members:GetCleanMembers()
 end
 
-function FarmingPartyPlusMemberList:SetWindowTransparency(value)
+function MemberList:SetWindowTransparency(value)
   if value ~= nil then
     Settings:Window().transparency = value
   end
   FarmingPartyPlusMembersWindow:SetAlpha(Settings:Window().transparency / 100)
 end
 
-function FarmingPartyPlusMemberList:SetWindowBackgroundTransparency(value)
+function MemberList:SetWindowBackgroundTransparency(value)
   if value ~= nil then
     Settings:Window().backgroundTransparency = value
   end
   FarmingPartyPlusMembersWindow:GetNamedChild('BG'):SetAlpha(Settings:Window().backgroundTransparency / 100)
 end
 
-function FarmingPartyPlusMemberList:WindowResizeHandler(control)
+function MemberList:WindowResizeHandler(control)
   local width, height = control:GetDimensions()
   Settings:Window().width = width
   Settings:Window().height = height
@@ -152,14 +152,14 @@ function FarmingPartyPlusMemberList:WindowResizeHandler(control)
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberList:GetLayout()
+function MemberList:GetLayout()
   if Settings:IsCompactMemberWindow() then
     return COMPACT_LAYOUT
   end
   return NORMAL_LAYOUT
 end
 
-function FarmingPartyPlusMemberList:SaveCurrentDimensionsForMode(isCompact, width, height)
+function MemberList:SaveCurrentDimensionsForMode(isCompact, width, height)
   local window = Settings:Window()
   local currentWidth = width or FarmingPartyPlusMembersWindow:GetWidth()
   local currentHeight = height or FarmingPartyPlusMembersWindow:GetHeight()
@@ -172,7 +172,7 @@ function FarmingPartyPlusMemberList:SaveCurrentDimensionsForMode(isCompact, widt
   end
 end
 
-function FarmingPartyPlusMemberList:ApplyHeaderLayout(layout)
+function MemberList:ApplyHeaderLayout(layout)
   local headers = FarmingPartyPlusMembersWindow:GetNamedChild('Headers')
   local farmerHeader = headers:GetNamedChild('Farmer')
   local bestItemHeader = headers:GetNamedChild('BestItemName')
@@ -195,7 +195,7 @@ function FarmingPartyPlusMemberList:ApplyHeaderLayout(layout)
   totalValueHeader:SetWidth(layout.totalHeaderWidth)
 end
 
-function FarmingPartyPlusMemberList:ApplyRowLayout(rowControl, layout)
+function MemberList:ApplyRowLayout(rowControl, layout)
   local bestItemControl = GetControl(rowControl, 'BestItemName')
   local farmerButton = GetControl(rowControl, 'FarmerButton')
   local totalValueLabel = GetControl(rowControl, 'TotalValue')
@@ -223,7 +223,7 @@ function FarmingPartyPlusMemberList:ApplyRowLayout(rowControl, layout)
   totalValueLabel:SetWidth(layout.totalRowWidth)
 end
 
-function FarmingPartyPlusMemberList:ApplyCompactMode()
+function MemberList:ApplyCompactMode()
   local windowSettings = Settings:Window()
   local layout = self:GetLayout()
 
@@ -232,12 +232,12 @@ function FarmingPartyPlusMemberList:ApplyCompactMode()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberList:OnMemberJoined()
+function MemberList:OnMemberJoined()
   self:AddAllGroupMembers()
   self:RefreshOnlineStates()
 end
 
-function FarmingPartyPlusMemberList:OnMemberLeft(event, memberName, reason, wasLocalPlayer)
+function MemberList:OnMemberLeft(event, memberName, reason, wasLocalPlayer)
   if not wasLocalPlayer then
     local name = zo_strformat(SI_UNIT_NAME, memberName)
     members:DeleteMember(name)
@@ -252,14 +252,14 @@ function FarmingPartyPlusMemberList:OnMemberLeft(event, memberName, reason, wasL
   self:RefreshOnlineStates()
 end
 
-function FarmingPartyPlusMemberList:SetupScrollList()
+function MemberList:SetupScrollList()
   ZO_ScrollList_AddResizeOnScreenResize(listContainer)
   ZO_ScrollList_AddDataType(listContainer, FarmingPartyPlus.DataTypes.MEMBER, 'FarmingPartyPlusMemberDataRow', 20, function(listControl, data)
     self:SetupMemberRow(listControl, data)
   end)
 end
 
-function FarmingPartyPlusMemberList:UpdateScrollList()
+function MemberList:UpdateScrollList()
   local scrollData = ZO_ScrollList_GetDataList(listContainer)
   ZO_ScrollList_Clear(listContainer)
 
@@ -291,7 +291,7 @@ function FarmingPartyPlusMemberList:UpdateScrollList()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
+function MemberList:SetupMemberRow(rowControl, rowData)
   rowControl.data = rowData
   local data = rowData.rawData
   self:ApplyRowLayout(rowControl, self:GetLayout())
@@ -344,21 +344,21 @@ function FarmingPartyPlusMemberList:SetupMemberRow(rowControl, rowData)
   totalValueLabel:SetText(FarmingPartyPlus.FormatNumber(data.totalValue) .. 'g')
 end
 
-function FarmingPartyPlusMemberList.onResize()
+function MemberList.onResize()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberList:ToggleMembersWindow()
+function MemberList:ToggleMembersWindow()
   FarmingPartyPlusMembersWindow:SetHidden(not FarmingPartyPlusMembersWindow:IsHidden())
 end
 
-function FarmingPartyPlusMemberList:Reset()
+function MemberList:Reset()
   members:DeleteAllMembers()
   self:AddAllGroupMembers()
   self:RefreshOnlineStates()
 end
 
-function FarmingPartyPlusMemberList:GetAllGroupMembers()
+function MemberList:GetAllGroupMembers()
   local countMembers = GetGroupSize()
   local rawMembers = {}
   local playerName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
@@ -376,7 +376,7 @@ function FarmingPartyPlusMemberList:GetAllGroupMembers()
   return rawMembers
 end
 
-function FarmingPartyPlusMemberList:RemoveMissingMembers(currentGroupMembers)
+function MemberList:RemoveMissingMembers(currentGroupMembers)
   for name in pairs(members:GetMembers()) do
     if currentGroupMembers[name] == nil then
       members:DeleteMember(name)
@@ -384,11 +384,11 @@ function FarmingPartyPlusMemberList:RemoveMissingMembers(currentGroupMembers)
   end
 end
 
-function FarmingPartyPlusMemberList:PruneMissingMembers()
+function MemberList:PruneMissingMembers()
   self:RemoveMissingMembers(self:GetAllGroupMembers())
 end
 
-function FarmingPartyPlusMemberList:SyncGroupMembers(currentGroupMembers)
+function MemberList:SyncGroupMembers(currentGroupMembers)
   self:RemoveMissingMembers(currentGroupMembers)
   for name, displayName in pairs(currentGroupMembers) do
     if not members:HasMember(name) then
@@ -399,11 +399,11 @@ function FarmingPartyPlusMemberList:SyncGroupMembers(currentGroupMembers)
   end
 end
 
-function FarmingPartyPlusMemberList:AddAllGroupMembers()
+function MemberList:AddAllGroupMembers()
   self:SyncGroupMembers(self:GetAllGroupMembers())
 end
 
-function FarmingPartyPlusMemberList:RefreshOnlineStates()
+function MemberList:RefreshOnlineStates()
   local onlineByMemberKey = {}
   local localPlayerKey = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
   if localPlayerKey ~= '' then
@@ -425,7 +425,7 @@ function FarmingPartyPlusMemberList:RefreshOnlineStates()
   end
 end
 
-function FarmingPartyPlusMemberList:MarkHelperActive(characterName, displayName)
+function MemberList:MarkHelperActive(characterName, displayName)
   if displayName ~= nil then
     local memberKey = members:GetMemberKeyByDisplayName(displayName)
     if memberKey ~= nil then
@@ -459,7 +459,7 @@ local function BuildScoreString(rank, farmer)
   return string.format('%d. %s %sg', rank, FormatDisplayName(farmer.displayName), FarmingPartyPlus.FormatNumber(farmer.totalValue))
 end
 
-function FarmingPartyPlusMemberList:PrintScoresToChat()
+function MemberList:PrintScoresToChat()
   local array = {}
   for _, memberKey in ipairs(members:GetKeys()) do
     local member = members:GetMember(memberKey)

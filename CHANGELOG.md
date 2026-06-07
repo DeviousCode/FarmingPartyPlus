@@ -5,17 +5,25 @@ All notable changes to `FarmingPartyPlus` are documented in this file.
 ## [Unreleased]
 ### Added
 - `FarmingPartyPlus` now owns the local fishing/gutting sender path directly when `LibGroupBroadcast` is installed, so the main addon can contribute sync without relying on the separate helper addon.
+- Added a preferred market price source setting so users can choose `Auto`, `TTC`, `MM`, or `ATT` while always keeping vendor value as the final fallback.
 
 ### Changed
 - The recommended install flow now treats `FarmingPartyPlus` as the normal one-addon path for both sending and receiving fishing/gutting sync.
 - Fishing/gutting sync now uses a shared lookup-table payload for the tracked fishing domain instead of shipping full item links through `LibGroupBroadcast`.
+- `FarmingPartyPlus` now advertises `LibGroupBroadcast>=95` as an optional dependency in the main manifest, since the built-in sync path now lives in the main addon.
 - Account-wide settings and saved member state are now separated by `GetWorldName()` so NA, EU, and other server families stop sharing the same persisted addon data.
 - Removed the old `/fpp sync` command now that sync is part of the normal built-in FPP flow.
+- Consolidated the built-in sync path to a single `LibGroupBroadcast` protocol now that the old helper split is no longer part of the active install flow.
+- Reduced the addon’s public Lua surface by routing module constructors and window actions through the main `FarmingPartyPlus` table instead of a set of standalone global class names.
+- Centralized tracking-status ownership in `Startup.lua` so the top-level addon controls enabled/disabled state while member and loot modules only manage their own event registrations.
+- Pricing now uses a shared addon helper for loot, sync, recipe filtering, and stack tracking so all value calculations follow the same market-source priority rules.
 
 ### Fixed
 - Synced fishing/gutting updates now resolve reliably on other `FarmingPartyPlus` clients for stack replay, processed fish subtraction, and `Fish` / `Perfect Roe` outputs.
 - Solo host rows no longer gray out as if they were offline when you are not grouped.
 - Best-item hover tooltips now ignore plain-text fallback names instead of trying to open malformed ESO item links.
+- Removed redundant slash-command registration during startup and initialization.
+- Missing market pricing addons no longer risk breaking value lookups when a preferred source is selected, because unavailable sources are skipped automatically at runtime.
 
 ## [3.0.6] - 2026-06-04
 ### Changed

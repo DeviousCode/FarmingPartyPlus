@@ -5,8 +5,10 @@ local MINIMUM_RECIPE_VALUE = 100
 local MAXIMUM_RECIPE_VALUE = 50000
 
 local LAM2 = LibAddonMenu2
+local Addon = FarmingPartyPlus
 
-FarmingPartyPlusSettings = ZO_Object:Subclass()
+local SettingsClass = ZO_Object:Subclass()
+Addon.Classes.Settings = SettingsClass
 
 local qualityChoiceValues = {
   ITEM_QUALITY_TRASH,
@@ -32,7 +34,7 @@ end
 
 local function BuildWhitelistDefaults()
   local itemStates = {}
-  for _, item in ipairs(FarmingPartyPlusItemCatalog.items) do
+  for _, item in ipairs(FarmingPartyPlus.ItemCatalog.items) do
     itemStates[item.key] = item.defaultEnabled
   end
   return {
@@ -79,18 +81,18 @@ local function TableHasMeaningfulData(candidate, defaults)
   return false
 end
 
-FarmingPartyPlusSettings.TRACKING_STATUS = {
+SettingsClass.TRACKING_STATUS = {
   ENABLED = 'ENABLED',
   DISABLED = 'DISABLED'
 }
 
-function FarmingPartyPlusSettings:New()
+function SettingsClass:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
   return obj
 end
 
-function FarmingPartyPlusSettings:Initialize()
+function SettingsClass:Initialize()
   local defaults = {
     storage = {
       migratedFromCharacter = false,
@@ -109,6 +111,7 @@ function FarmingPartyPlusSettings:Initialize()
     displayGroupLoot = true,
     displayLootValue = true,
     manualHighscoreReset = true,
+    preferredPriceSource = FarmingPartyPlus.Price.SOURCE_AUTO,
     lootWhitelist = BuildWhitelistDefaults(),
     whitelistProfiles = {},
     window = {
@@ -347,6 +350,30 @@ function FarmingPartyPlusSettings:Initialize()
     },
     {
       type = 'header',
+      name = ColoredHeader('Pricing', 'D9B45A'),
+      width = 'full'
+    },
+    {
+      type = 'dropdown',
+      name = 'Preferred market price source',
+      choices = FarmingPartyPlus.Price.GetSourceChoiceLabels(),
+      choicesValues = FarmingPartyPlus.Price.GetSourceChoiceValues(),
+      tooltip = 'Choose which market source to prefer first. Vendor value is always used as the final fallback.',
+      getFunc = function()
+        return self:GetPreferredPriceSource()
+      end,
+      setFunc = function(value)
+        self:SetPreferredPriceSource(value)
+      end,
+      width = 'full'
+    },
+    {
+      type = 'description',
+      text = 'Missing price addons are skipped automatically at runtime. Vendor value is always the final fallback.',
+      width = 'full'
+    },
+    {
+      type = 'header',
       name = ColoredHeader('Display', 'E07A5F'),
       width = 'full'
     },
@@ -572,7 +599,7 @@ function FarmingPartyPlus:WindowResizeHandler(control)
   textBuffer:SetWidth(width)
 end
 
-function FarmingPartyPlusSettings:NormalizeWindowSettings()
+function SettingsClass:NormalizeWindowSettings()
   local window = self.settings.window
   if window.compactMode == nil then
     window.compactMode = false
@@ -591,7 +618,7 @@ function FarmingPartyPlusSettings:NormalizeWindowSettings()
   end
 end
 
-function FarmingPartyPlusSettings:NormalizeWhitelistSettings()
+function SettingsClass:NormalizeWhitelistSettings()
   local whitelist = self.settings.lootWhitelist
   if whitelist.items == nil then
     whitelist.items = {}
@@ -600,25 +627,25 @@ function FarmingPartyPlusSettings:NormalizeWhitelistSettings()
     whitelist.minimumRecipeValue = DEFAULT_MINIMUM_RECIPE_VALUE
   end
   whitelist.minimumRecipeValue = zo_clamp(tonumber(whitelist.minimumRecipeValue) or DEFAULT_MINIMUM_RECIPE_VALUE, MINIMUM_RECIPE_VALUE, MAXIMUM_RECIPE_VALUE)
-  for _, item in ipairs(FarmingPartyPlusItemCatalog.items) do
+  for _, item in ipairs(FarmingPartyPlus.ItemCatalog.items) do
     if whitelist.items[item.key] == nil then
       whitelist.items[item.key] = item.defaultEnabled
     end
   end
 end
 
-function FarmingPartyPlusSettings:GetSettings()
+function SettingsClass:GetSettings()
   return self.settings
 end
 
-function FarmingPartyPlusSettings:GetWhitelistProfiles()
+function SettingsClass:GetWhitelistProfiles()
   if self.settings.whitelistProfiles == nil then
     self.settings.whitelistProfiles = {}
   end
   return self.settings.whitelistProfiles
 end
 
-function FarmingPartyPlusSettings:MinimumLootQuality()
+function SettingsClass:MinimumLootQuality()
   local value = self.settings.minimumLootQuality
   if type(value) == 'string' then
     value = qualityValueByLabel[value] or tonumber(value) or ITEM_QUALITY_TRASH
@@ -627,83 +654,104 @@ function FarmingPartyPlusSettings:MinimumLootQuality()
   return value
 end
 
-function FarmingPartyPlusSettings:TrackMotifLoot()
+function SettingsClass:TrackMotifLoot()
   return not self.settings.excludeFromTracking.motifs
 end
 
-function FarmingPartyPlusSettings:TrackGearLoot()
+function SettingsClass:TrackGearLoot()
   return not self.settings.excludeFromTracking.gear
 end
 
-function FarmingPartyPlusSettings:TrackGroupLoot()
+function SettingsClass:TrackGroupLoot()
   return self.settings.trackGroupLoot
 end
 
-function FarmingPartyPlusSettings:TrackSelfLoot()
+function SettingsClass:TrackSelfLoot()
   return self.settings.trackSelfLoot
 end
 
-function FarmingPartyPlusSettings:DisplayInChat()
+function SettingsClass:DisplayInChat()
   return self.settings.displayOnChat
 end
 
-function FarmingPartyPlusSettings:DisplayOnWindow()
+function SettingsClass:DisplayOnWindow()
   return self.settings.displayOnWindow
 end
 
-function FarmingPartyPlusSettings:DisplayOwnLoot()
+function SettingsClass:DisplayOwnLoot()
   return self.settings.displayOwnLoot
 end
 
-function FarmingPartyPlusSettings:DisplayGroupLoot()
+function SettingsClass:DisplayGroupLoot()
   return self.settings.displayGroupLoot
 end
 
-function FarmingPartyPlusSettings:DisplayLootValue()
+function SettingsClass:DisplayLootValue()
   return self.settings.displayLootValue
 end
 
-function FarmingPartyPlusSettings:ChatPrefix()
+function SettingsClass:ChatPrefix()
   return self.settings.chatPrefix
 end
 
-function FarmingPartyPlusSettings:Status()
+function SettingsClass:Status()
   return self.settings.status
 end
 
-function FarmingPartyPlusSettings:ResetStatusOnLogout()
+function SettingsClass:ResetStatusOnLogout()
   return self.settings.resetStatusOnLogout
 end
 
-function FarmingPartyPlusSettings:Window()
+function SettingsClass:Window()
   return self.settings.window
 end
 
-function FarmingPartyPlusSettings:IsCompactMemberWindow()
+function SettingsClass:IsCompactMemberWindow()
   return self.settings.window.compactMode == true
 end
 
-function FarmingPartyPlusSettings:ItemsWindow()
+function SettingsClass:ItemsWindow()
   return self.settings.itemsWindow
 end
 
-function FarmingPartyPlusSettings:FilterWindow()
+function SettingsClass:FilterWindow()
   return self.settings.filterWindow
 end
 
-function FarmingPartyPlusSettings:ValueDecimals()
+function SettingsClass:ValueDecimals()
   return self.settings.valueDecimals
 end
 
-function FarmingPartyPlusSettings:UseWhitelistMode()
+function SettingsClass:GetPreferredPriceSource()
+  local sourceKey = self.settings.preferredPriceSource
+  if sourceKey == nil or sourceKey == '' then
+    return FarmingPartyPlus.Price.SOURCE_AUTO
+  end
+  return sourceKey
+end
+
+function SettingsClass:SetPreferredPriceSource(sourceKey)
+  local validChoices = {}
+  for _, choiceValue in ipairs(FarmingPartyPlus.Price.GetSourceChoiceValues()) do
+    validChoices[choiceValue] = true
+  end
+
+  if validChoices[sourceKey] ~= true then
+    sourceKey = FarmingPartyPlus.Price.SOURCE_AUTO
+  end
+
+  self.settings.preferredPriceSource = sourceKey
+end
+
+function SettingsClass:UseWhitelistMode()
   return self.settings.lootWhitelist.enabled
 end
 
-function FarmingPartyPlusSettings:SetWhitelistMode(value)
+function SettingsClass:SetWhitelistMode(value)
   self.settings.lootWhitelist.enabled = value
 end
 
-function FarmingPartyPlusSettings:IsWhitelistedItem(itemKey)
+function SettingsClass:IsWhitelistedItem(itemKey)
   self:NormalizeWhitelistSettings()
   if self.settings.lootWhitelist.items[itemKey] == true then
     return true
@@ -729,31 +777,31 @@ function FarmingPartyPlusSettings:IsWhitelistedItem(itemKey)
   return false
 end
 
-function FarmingPartyPlusSettings:IsWhitelistRuleEnabled(ruleKey)
+function SettingsClass:IsWhitelistRuleEnabled(ruleKey)
   self:NormalizeWhitelistSettings()
   return self.settings.lootWhitelist.items[ruleKey] == true
 end
 
-function FarmingPartyPlusSettings:SetWhitelistedItem(itemKey, value)
+function SettingsClass:SetWhitelistedItem(itemKey, value)
   self:NormalizeWhitelistSettings()
   self.settings.lootWhitelist.items[itemKey] = value
 end
 
-function FarmingPartyPlusSettings:MinimumRecipeValue()
+function SettingsClass:MinimumRecipeValue()
   self:NormalizeWhitelistSettings()
   return self.settings.lootWhitelist.minimumRecipeValue
 end
 
-function FarmingPartyPlusSettings:SetMinimumRecipeValue(value)
+function SettingsClass:SetMinimumRecipeValue(value)
   self:NormalizeWhitelistSettings()
   self.settings.lootWhitelist.minimumRecipeValue = zo_clamp(tonumber(value) or DEFAULT_MINIMUM_RECIPE_VALUE, MINIMUM_RECIPE_VALUE, MAXIMUM_RECIPE_VALUE)
 end
 
-function FarmingPartyPlusSettings:AdjustMinimumRecipeValue(delta)
+function SettingsClass:AdjustMinimumRecipeValue(delta)
   self:SetMinimumRecipeValue(self:MinimumRecipeValue() + (tonumber(delta) or 0))
 end
 
-function FarmingPartyPlusSettings:GetWhitelistProfileNames()
+function SettingsClass:GetWhitelistProfileNames()
   local names = {}
   for profileName in pairs(self:GetWhitelistProfiles()) do
     names[#names + 1] = profileName
@@ -764,7 +812,7 @@ function FarmingPartyPlusSettings:GetWhitelistProfileNames()
   return names
 end
 
-function FarmingPartyPlusSettings:SaveWhitelistProfile(profileName)
+function SettingsClass:SaveWhitelistProfile(profileName)
   if profileName == nil or profileName == '' then
     return false
   end
@@ -774,7 +822,7 @@ function FarmingPartyPlusSettings:SaveWhitelistProfile(profileName)
   return true
 end
 
-function FarmingPartyPlusSettings:DeleteWhitelistProfile(profileName)
+function SettingsClass:DeleteWhitelistProfile(profileName)
   if profileName == nil or profileName == '' then
     return false
   end
@@ -788,7 +836,7 @@ function FarmingPartyPlusSettings:DeleteWhitelistProfile(profileName)
   return true
 end
 
-function FarmingPartyPlusSettings:LoadWhitelistProfile(profileName)
+function SettingsClass:LoadWhitelistProfile(profileName)
   local profile = self:GetWhitelistProfiles()[profileName]
   if profile == nil then
     return false
@@ -799,31 +847,31 @@ function FarmingPartyPlusSettings:LoadWhitelistProfile(profileName)
   return true
 end
 
-function FarmingPartyPlusSettings:ToggleAllWhitelistItems(value)
-  for _, item in ipairs(FarmingPartyPlusItemCatalog.items) do
+function SettingsClass:ToggleAllWhitelistItems(value)
+  for _, item in ipairs(FarmingPartyPlus.ItemCatalog.items) do
     self.settings.lootWhitelist.items[item.key] = value
   end
 end
 
-function FarmingPartyPlusSettings:ToggleWhitelistCategory(categoryKey, value)
-  for _, item in ipairs(FarmingPartyPlusItemCatalog.items) do
+function SettingsClass:ToggleWhitelistCategory(categoryKey, value)
+  for _, item in ipairs(FarmingPartyPlus.ItemCatalog.items) do
     if item.category == categoryKey then
       self.settings.lootWhitelist.items[item.key] = value
     end
   end
 end
 
-function FarmingPartyPlusSettings:MoveStart()
+function SettingsClass:MoveStart()
   FarmingPartyPlusWindowBG:SetAlpha(1)
 end
 
-function FarmingPartyPlusSettings:MoveStop()
+function SettingsClass:MoveStop()
   FarmingPartyPlusWindowBG:SetAlpha(self.settings.logWindow.backgroundTransparency / 100)
   self.settings.logWindow.positionLeft = math.floor(FarmingPartyPlusWindow:GetLeft())
   self.settings.logWindow.positionTop = math.floor(FarmingPartyPlusWindow:GetTop())
 end
 
-function FarmingPartyPlusSettings:SetWindowValues()
+function SettingsClass:SetWindowValues()
   local left = self.settings.logWindow.positionLeft
   local top = self.settings.logWindow.positionTop
   local height = self.settings.logWindow.height
@@ -847,50 +895,50 @@ function FarmingPartyPlusSettings:SetWindowValues()
   FarmingPartyPlusWindowBuffer:SetFont(zo_strjoin('|', face, fontSize, decoration))
 end
 
-function FarmingPartyPlusSettings:SetWindowBackgroundTransparency(value)
+function SettingsClass:SetWindowBackgroundTransparency(value)
   if value ~= nil then
     self.settings.logWindow.backgroundTransparency = value
   end
   FarmingPartyPlusWindow:GetNamedChild('BG'):SetAlpha(self.settings.logWindow.backgroundTransparency / 100)
 end
 
-function FarmingPartyPlusSettings:ToggleMinimumLootQuality(value)
+function SettingsClass:ToggleMinimumLootQuality(value)
   if type(value) == 'string' then
     value = qualityValueByLabel[value] or tonumber(value) or ITEM_QUALITY_TRASH
   end
   self.settings.minimumLootQuality = tonumber(value) or ITEM_QUALITY_TRASH
 end
 
-function FarmingPartyPlusSettings:ToggleTrackMotifLoot(value)
+function SettingsClass:ToggleTrackMotifLoot(value)
   self.settings.excludeFromTracking.motifs = not value
 end
 
-function FarmingPartyPlusSettings:ToggleTrackGearLoot(value)
+function SettingsClass:ToggleTrackGearLoot(value)
   self.settings.excludeFromTracking.gear = not value
 end
 
-function FarmingPartyPlusSettings:ToggleTrackGroupLoot(value)
+function SettingsClass:ToggleTrackGroupLoot(value)
   self.settings.trackGroupLoot = value
 end
 
-function FarmingPartyPlusSettings:ToggleTrackSelfLoot(value)
+function SettingsClass:ToggleTrackSelfLoot(value)
   self.settings.trackSelfLoot = value
 end
 
-function FarmingPartyPlusSettings:ToggleOnChat(value)
+function SettingsClass:ToggleOnChat(value)
   self.settings.displayOnChat = value
 end
 
-function FarmingPartyPlusSettings:ToggleOnWindow(value)
+function SettingsClass:ToggleOnWindow(value)
   self.settings.displayOnWindow = value
   self:SetWindowValues()
 end
 
-function FarmingPartyPlusSettings:ToggleLootWindow()
+function SettingsClass:ToggleLootWindow()
   self:ToggleOnWindow(not self:DisplayOnWindow())
 end
 
-function FarmingPartyPlusSettings:ToggleCompactMemberWindow(value)
+function SettingsClass:ToggleCompactMemberWindow(value)
   local window = self.settings.window
   if value == nil then
     value = not self:IsCompactMemberWindow()
@@ -920,42 +968,42 @@ function FarmingPartyPlusSettings:ToggleCompactMemberWindow(value)
   return value
 end
 
-function FarmingPartyPlusSettings:ToggleOwnLoot(value)
+function SettingsClass:ToggleOwnLoot(value)
   self.settings.displayOwnLoot = value
 end
 
-function FarmingPartyPlusSettings:ToggleGroupLootDisplay(value)
+function SettingsClass:ToggleGroupLootDisplay(value)
   self.settings.displayGroupLoot = value
 end
 
-function FarmingPartyPlusSettings:ToggleLootValue(value)
+function SettingsClass:ToggleLootValue(value)
   self.settings.displayLootValue = value
 end
 
-function FarmingPartyPlusSettings:ToggleStatusValue(value)
+function SettingsClass:ToggleStatusValue(value)
   self.settings.status = value
 end
 
-function FarmingPartyPlusSettings:ToggleResetStatusOnLogout(value)
+function SettingsClass:ToggleResetStatusOnLogout(value)
   self.settings.resetStatusOnLogout = value
 end
 
-function FarmingPartyPlusSettings:SetChatPrefix(value)
+function SettingsClass:SetChatPrefix(value)
   self.settings.chatPrefix = value
 end
 
-function FarmingPartyPlusSettings:SetTimestampFormat(value)
+function SettingsClass:SetTimestampFormat(value)
   self.settings.logWindow.timestampFormat = value
 end
 
-function FarmingPartyPlusSettings:ShowWindowTimestamp()
+function SettingsClass:ShowWindowTimestamp()
   return self.settings.logWindow.showTimestamp
 end
 
-function FarmingPartyPlusSettings:SetShowWindowTimestamp(value)
+function SettingsClass:SetShowWindowTimestamp(value)
   self.settings.logWindow.showTimestamp = value
 end
 
-function FarmingPartyPlusSettings:SetValueDecimals(value)
+function SettingsClass:SetValueDecimals(value)
   self.settings.valueDecimals = value
 end

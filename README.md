@@ -89,6 +89,25 @@ By default:
 - recipe tracking is off
 - the minimum recipe value starts at `3000g`
 
+### Price Source Priority
+
+`Farming Party Plus` can now prefer a specific market source when multiple pricing addons are available through `LibPrice`.
+
+You can choose:
+
+- `Auto`
+- `TTC`
+- `MM`
+- `ATT`
+
+Behavior:
+
+- `Auto` uses `TTC -> MM -> ATT`
+- if a selected market source is missing or has no data, it is skipped automatically
+- vendor value is always the final fallback
+
+This keeps totals stable even if a preferred market addon is not installed on a given client.
+
 ### Standard Tracking Mode
 
 If whitelist mode is turned off, the addon falls back to the more traditional tracking model:
@@ -148,7 +167,7 @@ Typical path:
 
 If you want multi-client fishing/gutting sync, install:
 
-- `LibGroupBroadcast`
+- `LibGroupBroadcast` `>=95`
 
 `LibGroupBroadcast` is not required for normal `FarmingPartyPlus` use. It is only needed for the built-in fishing/gutting sync path:
 
@@ -157,6 +176,8 @@ If you want multi-client fishing/gutting sync, install:
 - `Perfect Roe`
 - touched fish-stack replay after reset or late join
 - blue trash fish that are easier to reconstruct locally than remotely
+
+The built-in sync path now uses a single `LibGroupBroadcast` protocol owned by `FarmingPartyPlus`, rather than the older split helper flow.
 
 ## Commands
 

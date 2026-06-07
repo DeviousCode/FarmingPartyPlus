@@ -65,7 +65,7 @@
         <Button name="$(parent)FarmerButton" font="EsoUI/Common/Fonts/ProseAntiquePSMT.otf|15" horizontalAlignment="LEFT" verticalAlignment="CENTER">
           <Dimensions x="170" y="24" />
           <Anchor point="TOPLEFT" relativeTo="$(parent)HelperStatusIcon" relativePoint="TOPRIGHT" offsetX="6" offsetY="0"/>
-          <OnClicked>FarmingPartyPlusMemberItems:SetAndToggle(self:GetParent():GetNamedChild("FarmerId"):GetText())</OnClicked>
+          <OnClicked>FarmingPartyPlus:OpenMemberItemsForKey(self:GetParent():GetNamedChild("FarmerId"):GetText())</OnClicked>
         </Button>
         <Control name="$(parent)BestItemName" inherits="FarmingPartyPlusItemColumn" inheritAlpha="true" mouseEnabled="true">
           <Dimensions x="180" />
@@ -80,7 +80,7 @@
         <Button name="$(parent)InspectButton" font="ZoFontGameSmall" text="">
           <Anchor point="LEFT" relativeTo="$(parent)TotalValue" relativePoint="RIGHT" offsetX="10" offsetY="0" />
           <Dimensions x="1" y="22" />
-          <OnClicked>FarmingPartyPlusMemberItems:SetAndToggle(self:GetParent():GetNamedChild("FarmerId"):GetText())</OnClicked>
+          <OnClicked>FarmingPartyPlus:OpenMemberItemsForKey(self:GetParent():GetNamedChild("FarmerId"):GetText())</OnClicked>
         </Button>
       </Controls>
     </Control>

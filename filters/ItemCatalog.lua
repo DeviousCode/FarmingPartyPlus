@@ -1,4 +1,6 @@
-FarmingPartyPlusItemCatalog = {
+local Addon = FarmingPartyPlus
+
+local ItemCatalog = {
   categories = {
     ore = "Ore",
     wood = "Logs",
@@ -168,7 +170,9 @@ FarmingPartyPlusItemCatalog = {
   }
 }
 
-function FarmingPartyPlusItemCatalog:GetByKey(itemKey)
+Addon.ItemCatalog = ItemCatalog
+
+function ItemCatalog:GetByKey(itemKey)
   for _, item in ipairs(self.items) do
     if item.key == itemKey then
       return item
@@ -177,7 +181,7 @@ function FarmingPartyPlusItemCatalog:GetByKey(itemKey)
   return nil
 end
 
-function FarmingPartyPlusItemCatalog:GetGroupedItems()
+function ItemCatalog:GetGroupedItems()
   local groups = {}
   for categoryKey in pairs(self.categories) do
     groups[categoryKey] = {}

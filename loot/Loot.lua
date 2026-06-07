@@ -1,11 +1,4 @@
 local ADDON_NAME = 'FarmingPartyPlus'
-local function GetItemPrice(itemLink)
-  local price = LibPrice.ItemLinkToPriceGold(itemLink)
-  if price == nil or price == 0 then
-    price = GetItemLinkValue(itemLink, true)
-  end
-  return price
-end
 
 local function NormalizeItemName(itemLink)
   local itemName = GetItemLinkName(itemLink)
@@ -15,7 +8,9 @@ local function NormalizeItemName(itemLink)
   return zo_strlower(zo_strformat('<<z:1>>', itemName))
 end
 
-FarmingPartyPlusLoot = ZO_Object:Subclass()
+local Addon = FarmingPartyPlus
+local Loot = ZO_Object:Subclass()
+Addon.Classes.Loot = Loot
 
 local NOT_EQUIPPABLE = 0
 local Members
@@ -23,6 +18,7 @@ local MemberList
 local Logger
 local Settings
 local Sync
+local Price
 local knownFishingLinksByCode = {}
 local trackedLocalFishSlots = {}
 local trackedLocalFishSlotKeysByItemName = {}
@@ -115,18 +111,19 @@ local function IsCraftBagAutoAddEnabled()
   return GetSetting_Bool(SETTING_TYPE_LOOT, LOOT_SETTING_AUTO_ADD_TO_CRAFT_BAG)
 end
 
-function FarmingPartyPlusLoot:New()
+function Loot:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
   return obj
 end
 
-function FarmingPartyPlusLoot:Initialize()
+function Loot:Initialize()
   Members = FarmingPartyPlus.Modules.Members
   MemberList = FarmingPartyPlus.Modules.MemberList
   Logger = FarmingPartyPlus.Modules.Logger
   Settings = FarmingPartyPlus.Settings
   Sync = FarmingPartyPlus.Modules.Sync
+  Price = FarmingPartyPlus.Price
   self.hasShownCraftBagAutoAddWarning = false
 
   self:RegisterDialogs()
@@ -135,10 +132,10 @@ function FarmingPartyPlusLoot:Initialize()
   end
 end
 
-function FarmingPartyPlusLoot:Finalize()
+function Loot:Finalize()
 end
 
-function FarmingPartyPlusLoot:ClearSessionState()
+function Loot:ClearSessionState()
   ZO_ClearTable(knownFishingLinksByCode)
   ZO_ClearTable(trackedLocalFishSlots)
   ZO_ClearTable(trackedLocalFishSlotKeysByItemName)
@@ -147,7 +144,7 @@ function FarmingPartyPlusLoot:ClearSessionState()
   self.hasShownCraftBagAutoAddWarning = false
 end
 
-function FarmingPartyPlusLoot:RegisterDialogs()
+function Loot:RegisterDialogs()
   if self.dialogsRegistered then
     return
   end
@@ -176,7 +173,7 @@ function FarmingPartyPlusLoot:RegisterDialogs()
   self.dialogsRegistered = true
 end
 
-function FarmingPartyPlusLoot:WarnAboutCraftBagAutoAddIfNeeded(itemLink)
+function Loot:WarnAboutCraftBagAutoAddIfNeeded(itemLink)
   if self.hasShownCraftBagAutoAddWarning then
     return
   end
@@ -194,7 +191,7 @@ function FarmingPartyPlusLoot:WarnAboutCraftBagAutoAddIfNeeded(itemLink)
   ZO_Dialogs_ShowDialog(AUTO_ADD_WARNING_DIALOG_NAME)
 end
 
-function FarmingPartyPlusLoot:AddEventHandlers()
+function Loot:AddEventHandlers()
   EVENT_MANAGER:RegisterForEvent(
     ADDON_NAME,
     EVENT_LOOT_RECEIVED,
@@ -209,13 +206,11 @@ function FarmingPartyPlusLoot:AddEventHandlers()
       self:OnInventorySlotUpdated(...)
     end
   )
-  Settings:ToggleStatusValue(FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED)
 end
 
-function FarmingPartyPlusLoot:RemoveEventHandlers()
+function Loot:RemoveEventHandlers()
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_LOOT_RECEIVED)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE)
-  Settings:ToggleStatusValue(FarmingPartyPlus.Settings.TRACKING_STATUS.DISABLED)
 end
 
 local function FindMemberKey(looterName, lootedByPlayer)
@@ -307,7 +302,7 @@ local function ResolveSyncedTrackedItem(data)
     data.itemName = itemName
   end
   local trackedItem = (itemLink ~= nil and itemLink ~= '') and itemLink or itemName
-  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and GetItemPrice(itemLink)) or (tonumber(data.itemValue) or 0)
+  local resolvedItemValue = ((itemLink ~= nil and itemLink ~= '') and Price.GetItemPrice(itemLink)) or (tonumber(data.itemValue) or 0)
   return trackedItem, resolvedItemValue
 end
 
@@ -317,7 +312,7 @@ local function LogSyncedLoot(displayName, trackedItem, quantity, itemValue, loot
   Logger:LogLootItem(displayName, false, trackedItem, quantity, totalValue, lootType or 0)
 end
 
-function FarmingPartyPlusLoot:PassesBaseExclusions(itemLink)
+function Loot:PassesBaseExclusions(itemLink)
   local _, _, _, equipType = GetItemLinkInfo(itemLink)
   local itemType = GetItemLinkItemType(itemLink)
 
@@ -341,7 +336,7 @@ local function GetSyncedItemLink(data)
   return itemLink
 end
 
-function FarmingPartyPlusLoot:ShouldTrackByLegacyRules(itemLink)
+function Loot:ShouldTrackByLegacyRules(itemLink)
   local itemQuality = GetItemLinkQuality(itemLink)
   local minimumQuality = tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH
   if itemQuality < minimumQuality then
@@ -350,10 +345,10 @@ function FarmingPartyPlusLoot:ShouldTrackByLegacyRules(itemLink)
   return true
 end
 
-function FarmingPartyPlusLoot:ShouldTrackByWhitelist(itemLink)
+function Loot:ShouldTrackByWhitelist(itemLink)
   local itemType = GetItemLinkItemType(itemLink)
   if IsRecipeItemType(itemType) and Settings:IsWhitelistRuleEnabled('__recipes_any__') then
-    return GetItemPrice(itemLink) >= Settings:MinimumRecipeValue()
+  return Price.GetItemPrice(itemLink) >= Settings:MinimumRecipeValue()
   end
 
   local itemKey = NormalizeItemName(itemLink)
@@ -368,7 +363,7 @@ function FarmingPartyPlusLoot:ShouldTrackByWhitelist(itemLink)
   return false
 end
 
-function FarmingPartyPlusLoot:ShouldTrackItem(itemLink, lootType)
+function Loot:ShouldTrackItem(itemLink, lootType)
   if lootType == LOOT_TYPE_QUEST_ITEM then
     return false
   end
@@ -383,7 +378,7 @@ function FarmingPartyPlusLoot:ShouldTrackItem(itemLink, lootType)
   return self:ShouldTrackByLegacyRules(itemLink)
 end
 
-function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
+function Loot:ShouldTrackSyncedData(data)
   if data.lootType == LOOT_TYPE_QUEST_ITEM then
     return false
   end
@@ -406,7 +401,7 @@ function FarmingPartyPlusLoot:ShouldTrackSyncedData(data)
   return (tonumber(syncEntry.quality) or ITEM_QUALITY_TRASH) >= (tonumber(Settings:MinimumLootQuality()) or ITEM_QUALITY_TRASH)
 end
 
-function FarmingPartyPlusLoot:RememberLocalFishSlot(bagId, slotIndex)
+function Loot:RememberLocalFishSlot(bagId, slotIndex)
   if not IsBackpackSlot(bagId) then
     return
   end
@@ -435,14 +430,14 @@ function FarmingPartyPlusLoot:RememberLocalFishSlot(bagId, slotIndex)
     slotIndex = slotIndex,
     itemName = normalizedItemName,
     itemLink = itemLink,
-    itemValue = GetItemPrice(itemLink),
+    itemValue = Price.GetItemPrice(itemLink),
     stackCount = GetSlotStackSize(bagId, slotIndex),
     claimedCount = preservedClaimedCount
   }
   AddIndexedSlotKey(trackedLocalFishSlotKeysByItemName, normalizedItemName, slotKey)
 end
 
-function FarmingPartyPlusLoot:CaptureLocalFishSlotsByName(normalizedItemName)
+function Loot:CaptureLocalFishSlotsByName(normalizedItemName)
   local capturedSlotKeys = {}
   local bagSize = GetBagSize(BAG_BACKPACK)
   for slotIndex = 0, bagSize - 1 do
@@ -455,7 +450,7 @@ function FarmingPartyPlusLoot:CaptureLocalFishSlotsByName(normalizedItemName)
   return capturedSlotKeys
 end
 
-function FarmingPartyPlusLoot:ClaimLocalFishSlotForSession(normalizedItemName, caughtQuantity)
+function Loot:ClaimLocalFishSlotForSession(normalizedItemName, caughtQuantity)
   zo_callLater(function()
     local playerName = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
     local claimedCatchQuantity = tonumber(caughtQuantity) or 0
@@ -477,7 +472,7 @@ function FarmingPartyPlusLoot:ClaimLocalFishSlotForSession(normalizedItemName, c
   end, 0)
 end
 
-function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, itemSound, lootType, lootedByPlayer)
+function Loot:OnItemLooted(eventCode, name, itemLink, quantity, itemSound, lootType, lootedByPlayer)
   if not lootedByPlayer and not Settings:TrackGroupLoot() then
     return
   end
@@ -500,7 +495,7 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
     recentLocalGuttingOutputs[eventKey] = GetTimeStamp()
   end
 
-  local itemValue = GetItemPrice(itemLink)
+  local itemValue = Price.GetItemPrice(itemLink)
   local totalValue = itemValue * quantity
   local memberKey, looterMember = GetMember(name, lootedByPlayer)
 
@@ -522,7 +517,7 @@ function FarmingPartyPlusLoot:OnItemLooted(eventCode, name, itemLink, quantity, 
   end
 end
 
-function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
+function Loot:OnSyncedLootReceived(data, unitTag)
   if data == nil or not Settings:TrackGroupLoot() then
     return
   end
@@ -565,7 +560,7 @@ function FarmingPartyPlusLoot:OnSyncedLootReceived(data, unitTag)
   end
 end
 
-function FarmingPartyPlusLoot:GetSyncedFishSlotState(memberKey, bagId, slotIndex)
+function Loot:GetSyncedFishSlotState(memberKey, bagId, slotIndex)
   local memberSlots = trackedSyncedFishSlots[memberKey]
   if memberSlots == nil then
     return nil
@@ -573,7 +568,7 @@ function FarmingPartyPlusLoot:GetSyncedFishSlotState(memberKey, bagId, slotIndex
   return memberSlots[BuildBagSlotKey(bagId, slotIndex)]
 end
 
-function FarmingPartyPlusLoot:RememberSyncedFishSlot(memberKey, itemLink, itemValue, data)
+function Loot:RememberSyncedFishSlot(memberKey, itemLink, itemValue, data)
   local bagId = tonumber(data.bagId) or 0
   local slotIndex = tonumber(data.slotIndex) or 0
   if bagId <= 0 and slotIndex <= 0 then
@@ -600,7 +595,7 @@ function FarmingPartyPlusLoot:RememberSyncedFishSlot(memberKey, itemLink, itemVa
   }
 end
 
-function FarmingPartyPlusLoot:ApplySyncedFishStackState(memberKey, itemLink, itemValue, caughtQuantity, data)
+function Loot:ApplySyncedFishStackState(memberKey, itemLink, itemValue, caughtQuantity, data)
   local bagId = tonumber(data.bagId) or 0
   local slotIndex = tonumber(data.slotIndex) or 0
   if bagId <= 0 and slotIndex <= 0 then
@@ -625,23 +620,23 @@ function FarmingPartyPlusLoot:ApplySyncedFishStackState(memberKey, itemLink, ite
   end
 end
 
-function FarmingPartyPlusLoot:AddNewLootedItem(memberName, itemLink, itemValue, count)
+function Loot:AddNewLootedItem(memberName, itemLink, itemValue, count)
   local itemDetails = Members:GetItemForMember(memberName, itemLink)
   if itemDetails == nil then
-    itemDetails = FarmingPartyPlusMemberItem:New(itemLink)
+    itemDetails = FarmingPartyPlus.MemberItem:New(itemLink)
   end
-  itemDetails = FarmingPartyPlusMemberItem:UpdateItemCount(itemDetails, itemValue, count)
+  itemDetails = FarmingPartyPlus.MemberItem:UpdateItemCount(itemDetails, itemValue, count)
   Members:SetItemForMember(memberName, itemLink, itemDetails)
   Members:UpdateTotalValueAndSetBestItem(memberName, itemDetails, itemValue * count)
 end
 
-function FarmingPartyPlusLoot:AdjustLootedItem(memberName, itemLink, itemValue, count)
+function Loot:AdjustLootedItem(memberName, itemLink, itemValue, count)
   local itemDetails = Members:GetItemForMember(memberName, itemLink)
   if itemDetails == nil then
     return
   end
 
-  itemDetails = FarmingPartyPlusMemberItem:UpdateItemCount(itemDetails, itemValue, count)
+  itemDetails = FarmingPartyPlus.MemberItem:UpdateItemCount(itemDetails, itemValue, count)
   if itemDetails.count <= 0 then
     Members:DeleteItemForMember(memberName, itemLink)
   else
@@ -650,7 +645,7 @@ function FarmingPartyPlusLoot:AdjustLootedItem(memberName, itemLink, itemValue, 
   Members:RebuildMemberTotals(memberName)
 end
 
-function FarmingPartyPlusLoot:OnInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem, itemSoundCategory, inventoryUpdateReason, stackCountChange)
+function Loot:OnInventorySlotUpdated(eventCode, bagId, slotIndex, isNewItem, itemSoundCategory, inventoryUpdateReason, stackCountChange)
   if not IsBackpackSlot(bagId) or not Settings:TrackSelfLoot() then
     return
   end
@@ -684,7 +679,7 @@ function FarmingPartyPlusLoot:OnInventorySlotUpdated(eventCode, bagId, slotIndex
           self:RememberLocalFishSlot(bagId, slotIndex)
           return
         end
-        local itemValue = GetItemPrice(itemLink)
+      local itemValue = Price.GetItemPrice(itemLink)
         self:AddNewLootedItem(playerName, itemLink, itemValue, countDelta)
         Logger:LogLootItem(GetDisplayName('player'), true, itemLink, countDelta, itemValue * countDelta, LOOT_TYPE_ITEM)
       end

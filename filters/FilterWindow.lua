@@ -5,6 +5,7 @@ local RECIPE_VALUE_MIN = 100
 local RECIPE_VALUE_MAX = 50000
 local RECIPE_BAR_WIDTH = 300
 local LOAD_PROFILE_DIALOG_NAME = 'FarmingPartyPlusLoadWhitelistProfileDialog'
+local Addon = FarmingPartyPlus
 
 local function GetRecipeValueThumbOffset(value)
   local normalized = (zo_clamp(tonumber(value) or RECIPE_VALUE_MIN, RECIPE_VALUE_MIN, RECIPE_VALUE_MAX) - RECIPE_VALUE_MIN) / (RECIPE_VALUE_MAX - RECIPE_VALUE_MIN)
@@ -32,7 +33,8 @@ local function SanitizeProfileName(text)
   return zo_strgsub(text or '', '[^%a]', '')
 end
 
-FarmingPartyPlusFilterWindow = ZO_Object:Subclass()
+local FilterWindow = ZO_Object:Subclass()
+Addon.Classes.FilterWindow = FilterWindow
 
 local function UpdateItemButton(button, itemData)
   local isEnabled = Settings:IsWhitelistedItem(itemData.key)
@@ -50,13 +52,13 @@ local function UpdateItemButton(button, itemData)
   end
 end
 
-function FarmingPartyPlusFilterWindow:New()
+function FilterWindow:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
   return obj
 end
 
-function FarmingPartyPlusFilterWindow:Initialize()
+function FilterWindow:Initialize()
   Settings = FarmingPartyPlus.Settings
   listContainer = FarmingPartyPlusItemFilterWindow:GetNamedChild('List')
   self.selectedProfileName = nil
@@ -78,28 +80,28 @@ function FarmingPartyPlusFilterWindow:Initialize()
   self:UpdateScrollList()
 end
 
-function FarmingPartyPlusFilterWindow:Finalize()
+function FilterWindow:Finalize()
   self:SavePosition()
 end
 
-function FarmingPartyPlusFilterWindow:SavePosition()
+function FilterWindow:SavePosition()
   Settings:FilterWindow().positionLeft = FarmingPartyPlusItemFilterWindow:GetLeft()
   Settings:FilterWindow().positionTop = FarmingPartyPlusItemFilterWindow:GetTop()
   Settings:FilterWindow().width = FarmingPartyPlusItemFilterWindow:GetWidth()
   Settings:FilterWindow().height = FarmingPartyPlusItemFilterWindow:GetHeight()
 end
 
-function FarmingPartyPlusFilterWindow:WindowResizeHandler(control)
+function FilterWindow:WindowResizeHandler(control)
   self:SavePosition()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusFilterWindow:RefreshModeLabel()
+function FilterWindow:RefreshModeLabel()
   local modeLabel = FarmingPartyPlusItemFilterWindow:GetNamedChild('ModeValue')
   modeLabel:SetText(Settings:UseWhitelistMode() and 'Whitelist On' or 'Whitelist Off')
 end
 
-function FarmingPartyPlusFilterWindow:RegisterDialogs()
+function FilterWindow:RegisterDialogs()
   if self.dialogsRegistered then
     return
   end
@@ -131,11 +133,11 @@ function FarmingPartyPlusFilterWindow:RegisterDialogs()
   self.dialogsRegistered = true
 end
 
-function FarmingPartyPlusFilterWindow:GetProfileNameInput()
+function FilterWindow:GetProfileNameInput()
   return FarmingPartyPlusItemFilterWindow:GetNamedChild('ProfileNameBox'):GetNamedChild('Input')
 end
 
-function FarmingPartyPlusFilterWindow:ValidateProfileNameInput(editBox)
+function FilterWindow:ValidateProfileNameInput(editBox)
   if editBox == nil then
     return
   end
@@ -146,14 +148,14 @@ function FarmingPartyPlusFilterWindow:ValidateProfileNameInput(editBox)
   end
 end
 
-function FarmingPartyPlusFilterWindow:RefreshProfileControls()
+function FilterWindow:RefreshProfileControls()
   local selectButton = FarmingPartyPlusItemFilterWindow:GetNamedChild('ProfileSelectButton')
   local deleteButton = FarmingPartyPlusItemFilterWindow:GetNamedChild('ProfileDeleteButton')
   selectButton:SetText(self.selectedProfileName or 'Select Saved Profile')
   deleteButton:SetEnabled(self.selectedProfileName ~= nil)
 end
 
-function FarmingPartyPlusFilterWindow:SaveCurrentProfile()
+function FilterWindow:SaveCurrentProfile()
   local profileName = SanitizeProfileName(TrimText(self:GetProfileNameInput():GetText()))
   self:GetProfileNameInput():SetText(profileName)
   if profileName == '' then
@@ -169,7 +171,7 @@ function FarmingPartyPlusFilterWindow:SaveCurrentProfile()
   end
 end
 
-function FarmingPartyPlusFilterWindow:ShowProfileMenu(control)
+function FilterWindow:ShowProfileMenu(control)
   ClearMenu()
 
   local profileNames = Settings:GetWhitelistProfileNames()
@@ -187,7 +189,7 @@ function FarmingPartyPlusFilterWindow:ShowProfileMenu(control)
   ShowMenu(control)
 end
 
-function FarmingPartyPlusFilterWindow:SelectProfile(profileName)
+function FilterWindow:SelectProfile(profileName)
   self.selectedProfileName = profileName
   self:RefreshProfileControls()
   ZO_Dialogs_ShowDialog(LOAD_PROFILE_DIALOG_NAME, {
@@ -195,7 +197,7 @@ function FarmingPartyPlusFilterWindow:SelectProfile(profileName)
   })
 end
 
-function FarmingPartyPlusFilterWindow:DeleteSelectedProfile()
+function FilterWindow:DeleteSelectedProfile()
   if self.selectedProfileName == nil then
     return
   end
@@ -208,35 +210,35 @@ function FarmingPartyPlusFilterWindow:DeleteSelectedProfile()
   end
 end
 
-function FarmingPartyPlusFilterWindow:ToggleWhitelistMode()
+function FilterWindow:ToggleWhitelistMode()
   Settings:SetWhitelistMode(not Settings:UseWhitelistMode())
   self:RefreshModeLabel()
 end
 
-function FarmingPartyPlusFilterWindow:ToggleWindow()
+function FilterWindow:ToggleWindow()
   FarmingPartyPlusItemFilterWindow:SetHidden(not FarmingPartyPlusItemFilterWindow:IsHidden())
 end
 
-function FarmingPartyPlusFilterWindow:OpenWindow()
+function FilterWindow:OpenWindow()
   FarmingPartyPlusItemFilterWindow:SetHidden(false)
 end
 
-function FarmingPartyPlusFilterWindow:ToggleItem(itemKey)
+function FilterWindow:ToggleItem(itemKey)
   Settings:SetWhitelistedItem(itemKey, not Settings:IsWhitelistedItem(itemKey))
   self:UpdateScrollList()
 end
 
-function FarmingPartyPlusFilterWindow:SetAll(value)
+function FilterWindow:SetAll(value)
   Settings:ToggleAllWhitelistItems(value)
   self:UpdateScrollList()
 end
 
-function FarmingPartyPlusFilterWindow:SetCategory(categoryKey, value)
+function FilterWindow:SetCategory(categoryKey, value)
   Settings:ToggleWhitelistCategory(categoryKey, value)
   self:UpdateScrollList()
 end
 
-function FarmingPartyPlusFilterWindow:SetupScrollList()
+function FilterWindow:SetupScrollList()
   ZO_ScrollList_AddResizeOnScreenResize(listContainer)
   ZO_ScrollList_AddDataType(listContainer, FarmingPartyPlus.DataTypes.FILTER_HEADER, 'FarmingPartyPlusFilterHeaderRow', 28, function(control, data)
     self:SetupHeaderRow(control, data)
@@ -249,14 +251,14 @@ function FarmingPartyPlusFilterWindow:SetupScrollList()
   end)
 end
 
-function FarmingPartyPlusFilterWindow:UpdateScrollList()
+function FilterWindow:UpdateScrollList()
   local scrollData = ZO_ScrollList_GetDataList(listContainer)
   ZO_ScrollList_Clear(listContainer)
 
-  local grouped = FarmingPartyPlusItemCatalog:GetGroupedItems()
+  local grouped = FarmingPartyPlus.ItemCatalog:GetGroupedItems()
   for _, categoryKey in ipairs(CATEGORY_ORDER) do
     scrollData[#scrollData + 1] = ZO_ScrollList_CreateDataEntry(FarmingPartyPlus.DataTypes.FILTER_HEADER, {
-      title = FarmingPartyPlusItemCatalog.categories[categoryKey],
+        title = FarmingPartyPlus.ItemCatalog.categories[categoryKey],
       categoryKey = categoryKey
     })
 
@@ -281,7 +283,7 @@ function FarmingPartyPlusFilterWindow:UpdateScrollList()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusFilterWindow:SetupHeaderRow(control, data)
+function FilterWindow:SetupHeaderRow(control, data)
   control:GetNamedChild('Title'):SetText(data.title)
   control:GetNamedChild('Enable'):SetHandler('OnClicked', function()
     self:SetCategory(data.categoryKey, true)
@@ -291,7 +293,7 @@ function FarmingPartyPlusFilterWindow:SetupHeaderRow(control, data)
   end)
 end
 
-function FarmingPartyPlusFilterWindow:SetupRecipeValueRow(control)
+function FilterWindow:SetupRecipeValueRow(control)
   local valueLabel = control:GetNamedChild('Value')
   local currentValue = Settings:MinimumRecipeValue()
   valueLabel:SetText(string.format('Track recipes worth %sg or more', ZO_CommaDelimitNumber(currentValue)))
@@ -304,12 +306,12 @@ function FarmingPartyPlusFilterWindow:SetupRecipeValueRow(control)
   thumb:SetAnchor(TOPLEFT, barArea, TOPLEFT, thumbOffset - 5, 3)
 end
 
-function FarmingPartyPlusFilterWindow:SetMinimumRecipeValue(value)
+function FilterWindow:SetMinimumRecipeValue(value)
   Settings:SetMinimumRecipeValue(value)
   self:UpdateScrollList()
 end
 
-function FarmingPartyPlusFilterWindow:RecipeBarClicked(control, upInside)
+function FilterWindow:RecipeBarClicked(control, upInside)
   if not upInside then
     return
   end
@@ -325,7 +327,7 @@ function FarmingPartyPlusFilterWindow:RecipeBarClicked(control, upInside)
   self:SetMinimumRecipeValue(GetRecipeValueFromBarOffset(offset))
 end
 
-function FarmingPartyPlusFilterWindow:SetupItemRow(control, data)
+function FilterWindow:SetupItemRow(control, data)
   for i = 1, 3 do
     local button = control:GetNamedChild('Item' .. i)
     local itemData = data.items[i]

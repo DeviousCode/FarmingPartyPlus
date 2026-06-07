@@ -5,13 +5,13 @@
         <Down>FarmingPartyPlus:ToggleTracking()</Down>
       </Action>
       <Action name="TOGGLE_SCOREBOARD_PLUS">
-        <Down>FarmingPartyPlusMemberList:ToggleMembersWindow()</Down>
+        <Down>FarmingPartyPlus:ToggleMembersWindow()</Down>
       </Action>
       <Action name="TOGGLE_COMPACT_SCOREBOARD_PLUS">
         <Down>FarmingPartyPlus.Settings:ToggleCompactMemberWindow()</Down>
       </Action>
       <Action name="TOGGLE_ITEM_BREAKDOWN_PLUS">
-        <Down>FarmingPartyPlusMemberItems:ToggleWindow()</Down>
+        <Down>FarmingPartyPlus:ToggleMemberItemsWindow()</Down>
       </Action>
       <Action name="TOGGLE_FILTERS_PLUS">
         <Down>FarmingPartyPlus.Modules.FilterWindow:ToggleWindow()</Down>

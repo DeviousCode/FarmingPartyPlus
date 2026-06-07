@@ -2,16 +2,18 @@ local listContainer
 local memberKey = zo_strformat(SI_UNIT_NAME, GetUnitName('player'))
 local members = {}
 local Settings
+local Addon = FarmingPartyPlus
 
-FarmingPartyPlusMemberItems = ZO_Object:Subclass()
+local MemberItems = ZO_Object:Subclass()
+Addon.Classes.MemberItems = MemberItems
 
-function FarmingPartyPlusMemberItems:New()
+function MemberItems:New()
   local obj = ZO_Object.New(self)
   obj:Initialize()
   return obj
 end
 
-function FarmingPartyPlusMemberItems:Initialize()
+function MemberItems:Initialize()
   members = FarmingPartyPlus.Modules.Members
   Settings = FarmingPartyPlus.Settings
   listContainer = FarmingPartyPlusMemberItemsWindow:GetNamedChild('List')
@@ -33,21 +35,21 @@ function FarmingPartyPlusMemberItems:Initialize()
   members:RegisterCallback('OnKeysUpdated', self.UpdateScrollList)
 end
 
-function FarmingPartyPlusMemberItems:Finalize()
+function MemberItems:Finalize()
   Settings:ItemsWindow().positionLeft = FarmingPartyPlusMemberItemsWindow:GetLeft()
   Settings:ItemsWindow().positionTop = FarmingPartyPlusMemberItemsWindow:GetTop()
   Settings:ItemsWindow().width = FarmingPartyPlusMemberItemsWindow:GetWidth()
   Settings:ItemsWindow().height = FarmingPartyPlusMemberItemsWindow:GetHeight()
 end
 
-function FarmingPartyPlusMemberItems:SetupScrollList()
+function MemberItems:SetupScrollList()
   ZO_ScrollList_AddResizeOnScreenResize(listContainer)
   ZO_ScrollList_AddDataType(listContainer, FarmingPartyPlus.DataTypes.MEMBER_ITEM, 'FarmingPartyPlusItemDataRow', 20, function(listControl, data)
     self:SetupItemRow(listControl, data)
   end)
 end
 
-function FarmingPartyPlusMemberItems:UpdateScrollList()
+function MemberItems:UpdateScrollList()
   ZO_ScrollList_Clear(listContainer)
   local member = members:GetMember(memberKey)
   if member == nil then
@@ -78,26 +80,26 @@ function FarmingPartyPlusMemberItems:UpdateScrollList()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberItems:SetupItemRow(rowControl, rowData)
+function MemberItems:SetupItemRow(rowControl, rowData)
   local data = rowData.rawData
   GetControl(rowControl, 'ItemName'):SetText(data.itemLink)
   GetControl(rowControl, 'Count'):SetText(data.count)
   GetControl(rowControl, 'TotalValue'):SetText(FarmingPartyPlus.FormatNumber(data.totalValue) .. 'g')
 end
 
-function FarmingPartyPlusMemberItems.onResize()
+function MemberItems.onResize()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberItems:WindowResizeHandler(control)
+function MemberItems:WindowResizeHandler(control)
   Settings:ItemsWindow().width = control:GetWidth()
   Settings:ItemsWindow().height = control:GetHeight()
   ZO_ScrollList_Commit(listContainer)
 end
 
-function FarmingPartyPlusMemberItems:SetAndToggle(key)
+function MemberItems:SetAndToggle(key)
   if memberKey == key then
-    FarmingPartyPlusMemberItems:ToggleWindow()
+    self:ToggleWindow()
   else
     memberKey = key
     self:SetTitle()
@@ -106,7 +108,7 @@ function FarmingPartyPlusMemberItems:SetAndToggle(key)
   end
 end
 
-function FarmingPartyPlusMemberItems:SetTitle()
+function MemberItems:SetTitle()
   local title = FarmingPartyPlusMemberItemsWindow:GetNamedChild('Title')
   local member = members:GetMember(memberKey)
   if member ~= nil then
@@ -114,22 +116,22 @@ function FarmingPartyPlusMemberItems:SetTitle()
   end
 end
 
-function FarmingPartyPlusMemberItems:ToggleWindow()
+function MemberItems:ToggleWindow()
   FarmingPartyPlusMemberItemsWindow:SetHidden(not FarmingPartyPlusMemberItemsWindow:IsHidden())
 end
 
-function FarmingPartyPlusMemberItems:OpenWindow()
+function MemberItems:OpenWindow()
   FarmingPartyPlusMemberItemsWindow:SetHidden(false)
 end
 
-function FarmingPartyPlusMemberItems:SetWindowTransparency(value)
+function MemberItems:SetWindowTransparency(value)
   if value ~= nil then
     Settings:ItemsWindow().transparency = value
   end
   FarmingPartyPlusMemberItemsWindow:SetAlpha(Settings:ItemsWindow().transparency / 100)
 end
 
-function FarmingPartyPlusMemberItems:SetWindowBackgroundTransparency(value)
+function MemberItems:SetWindowBackgroundTransparency(value)
   if value ~= nil then
     Settings:ItemsWindow().backgroundTransparency = value
   end

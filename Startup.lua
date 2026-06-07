@@ -1,23 +1,12 @@
 local ADDON_NAME = 'FarmingPartyPlus'
-
-FarmingPartyPlus = ZO_Object:Subclass()
-FarmingPartyPlus.Modules = {}
-FarmingPartyPlus.DataTypes = {
-  MEMBER = 1,
-  MEMBER_ITEM = 2,
-  FILTER_HEADER = 3,
-  FILTER_ROW = 4,
-  FILTER_RECIPE_VALUE = 5
-}
-FarmingPartyPlus.SaveData = {}
-FarmingPartyPlus.Settings = {}
+local Addon = FarmingPartyPlus
 
 local DIGIT_GROUP_REPLACER = ','
 local DIGIT_GROUP_DECIMAL_REPLACER = '.'
 local DIGIT_GROUP_REPLACER_THRESHOLD = zo_pow(10, GetDigitGroupingSize())
 local READY_MESSAGE_DELAY_MS = 1500
 
-function FPPlus_LocalizeDecimalNumber(amount)
+local function LocalizeDecimalNumber(amount)
   if amount == 0 then
     amount = '0'
   end
@@ -34,22 +23,22 @@ function FPPlus_LocalizeDecimalNumber(amount)
   return amount
 end
 
-function FarmingPartyPlus.FormatNumber(num)
-  return FPPlus_LocalizeDecimalNumber(string.format('%0.' .. (FarmingPartyPlus.Settings:ValueDecimals() or 2) .. 'f', num))
+function Addon.FormatNumber(num)
+  return LocalizeDecimalNumber(string.format('%0.' .. (Addon.Settings:ValueDecimals() or 2) .. 'f', num))
 end
 
 local function OnPlayerDeactivated()
-  FarmingPartyPlus:Finalize()
+  Addon:Finalize()
 end
 
 local function GetTrackingStatusText()
-  if FarmingPartyPlus.Settings ~= nil and FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
+  if Addon.Settings ~= nil and Addon.Settings:Status() == Addon.Settings.TRACKING_STATUS.ENABLED then
     return 'tracking on'
   end
   return 'tracking off'
 end
 
-function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
+function Addon:OnAddOnLoaded(event, addonName)
   if addonName ~= ADDON_NAME then
     return
   end
@@ -63,7 +52,7 @@ function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_DEACTIVATED, OnPlayerDeactivated)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
-  FarmingPartyPlus.Settings = FarmingPartyPlusSettings:New()
+  Addon.Settings = FarmingPartyPlus.Classes.Settings:New()
   self:ConsoleCommands()
   self:Initialize()
   zo_callLater(function()
@@ -71,7 +60,7 @@ function FarmingPartyPlus:OnAddOnLoaded(event, addonName)
   end, READY_MESSAGE_DELAY_MS)
 end
 
-function FarmingPartyPlus:Finalize()
+function Addon:Finalize()
   for _, moduleObject in pairs(self.Modules) do
     moduleObject:Finalize()
   end
@@ -81,28 +70,27 @@ function FarmingPartyPlus:Finalize()
   end
 end
 
-function FarmingPartyPlus:Initialize()
-  self:ConsoleCommands()
-  self.Modules.MemberList = FarmingPartyPlusMemberList:New()
-  self.Modules.Logger = FarmingPartyPlusLogger:New()
-  self.Modules.MemberItems = FarmingPartyPlusMemberItems:New()
-  self.Modules.FilterWindow = FarmingPartyPlusFilterWindow:New()
-  self.Modules.Sync = FarmingPartyPlusSyncHost:New()
-  self.Modules.Loot = FarmingPartyPlusLoot:New()
+function Addon:Initialize()
+  self.Modules.MemberList = FarmingPartyPlus.Classes.MemberList:New()
+  self.Modules.Logger = FarmingPartyPlus.Classes.Logger:New()
+  self.Modules.MemberItems = FarmingPartyPlus.Classes.MemberItems:New()
+  self.Modules.FilterWindow = FarmingPartyPlus.Classes.FilterWindow:New()
+  self.Modules.Sync = FarmingPartyPlus.Classes.SyncHost:New()
+  self.Modules.Loot = FarmingPartyPlus.Classes.Loot:New()
 end
 
-function FarmingPartyPlus:Prune()
+function Addon:Prune()
   self.Modules.MemberList:PruneMissingMembers()
   d('[Farming Party Plus]: Members have been pruned')
 end
 
-function FarmingPartyPlus:UpdateMembers()
+function Addon:UpdateMembers()
   self.Modules.MemberList:PruneMissingMembers()
   self.Modules.MemberList:AddAllGroupMembers()
   d('[Farming Party Plus]: Members have been updated')
 end
 
-function FarmingPartyPlus:Reset()
+function Addon:Reset()
   self.Modules.MemberList:Reset()
   if self.Modules.Loot ~= nil and self.Modules.Loot.ClearSessionState ~= nil then
     self.Modules.Loot:ClearSessionState()
@@ -113,21 +101,23 @@ function FarmingPartyPlus:Reset()
   d('[Farming Party Plus]: Tracking data has been reset')
 end
 
-function FarmingPartyPlus:StartTracking()
+function Addon:StartTracking()
   if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.DISABLED then
     self.Modules.MemberList:AddEventHandlers()
     self.Modules.Loot:AddEventHandlers()
+    FarmingPartyPlus.Settings:ToggleStatusValue(FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED)
   end
   d('[Farming Party Plus]: Tracking is on')
 end
 
-function FarmingPartyPlus:StopTracking()
+function Addon:StopTracking()
   self.Modules.MemberList:RemoveEventHandlers()
   self.Modules.Loot:RemoveEventHandlers()
+  FarmingPartyPlus.Settings:ToggleStatusValue(FarmingPartyPlus.Settings.TRACKING_STATUS.DISABLED)
   d('[Farming Party Plus]: Tracking is off')
 end
 
-function FarmingPartyPlus:ToggleTracking()
+function Addon:ToggleTracking()
   if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
     self:StopTracking()
   else
@@ -135,7 +125,25 @@ function FarmingPartyPlus:ToggleTracking()
   end
 end
 
-function FarmingPartyPlus:ConsoleCommands()
+function Addon:ToggleMembersWindow()
+  if self.Modules.MemberList ~= nil then
+    self.Modules.MemberList:ToggleMembersWindow()
+  end
+end
+
+function Addon:ToggleMemberItemsWindow()
+  if self.Modules.MemberItems ~= nil then
+    self.Modules.MemberItems:ToggleWindow()
+  end
+end
+
+function Addon:OpenMemberItemsForKey(memberKey)
+  if self.Modules.MemberItems ~= nil then
+    self.Modules.MemberItems:SetAndToggle(memberKey)
+  end
+end
+
+function Addon:ConsoleCommands()
   local function HandleMainCommand(param)
     local trimmedParam = string.gsub(param or '', '%s+$', ''):lower()
     if trimmedParam == '' then
@@ -151,7 +159,7 @@ function FarmingPartyPlus:ConsoleCommands()
     elseif trimmedParam == 'toggle' then
       self:ToggleTracking()
     elseif trimmedParam == 'status' then
-      if FarmingPartyPlus.Settings:Status() == FarmingPartyPlus.Settings.TRACKING_STATUS.ENABLED then
+      if Addon.Settings:Status() == Addon.Settings.TRACKING_STATUS.ENABLED then
         d('[Farming Party Plus]: Tracking is on')
       else
         d('[Farming Party Plus]: Tracking is off')
@@ -161,21 +169,21 @@ function FarmingPartyPlus:ConsoleCommands()
     elseif trimmedParam == 'filters' then
       self.Modules.FilterWindow:ToggleWindow()
     elseif trimmedParam == 'loot' or trimmedParam == 'log' then
-      FarmingPartyPlus.Settings:ToggleLootWindow()
+      Addon.Settings:ToggleLootWindow()
     elseif trimmedParam == 'compact' then
-      local isCompact = FarmingPartyPlus.Settings:ToggleCompactMemberWindow()
+      local isCompact = Addon.Settings:ToggleCompactMemberWindow()
       d(string.format('[Farming Party Plus]: Compact scoreboard mode %s', isCompact and 'is on' or 'is off'))
     elseif trimmedParam == 'compact on' then
-      FarmingPartyPlus.Settings:ToggleCompactMemberWindow(true)
+      Addon.Settings:ToggleCompactMemberWindow(true)
       d('[Farming Party Plus]: Compact scoreboard mode is on')
     elseif trimmedParam == 'compact off' then
-      FarmingPartyPlus.Settings:ToggleCompactMemberWindow(false)
+      Addon.Settings:ToggleCompactMemberWindow(false)
       d('[Farming Party Plus]: Compact scoreboard mode is off')
     elseif trimmedParam == 'whitelist on' then
-      FarmingPartyPlus.Settings:SetWhitelistMode(true)
+      Addon.Settings:SetWhitelistMode(true)
       d('[Farming Party Plus]: Whitelist mode is on')
     elseif trimmedParam == 'whitelist off' then
-      FarmingPartyPlus.Settings:SetWhitelistMode(false)
+      Addon.Settings:SetWhitelistMode(false)
       d('[Farming Party Plus]: Whitelist mode is off')
     elseif trimmedParam == 'help' then
       SLASH_COMMANDS['/fpphelp']()
@@ -213,7 +221,7 @@ function FarmingPartyPlus:ConsoleCommands()
   SLASH_COMMANDS['/fpc'] = SLASH_COMMANDS['/fppc']
 
   SLASH_COMMANDS['/fppm'] = function()
-    FarmingPartyPlusMemberItems:ToggleWindow()
+    self:ToggleMemberItemsWindow()
   end
 
   SLASH_COMMANDS['/fppfilters'] = function()
@@ -221,7 +229,7 @@ function FarmingPartyPlus:ConsoleCommands()
   end
 
   SLASH_COMMANDS['/fpploot'] = function()
-    FarmingPartyPlus.Settings:ToggleLootWindow()
+    Addon.Settings:ToggleLootWindow()
   end
 end
 
@@ -229,6 +237,6 @@ EVENT_MANAGER:RegisterForEvent(
   ADDON_NAME,
   EVENT_ADD_ON_LOADED,
   function(...)
-    FarmingPartyPlus:OnAddOnLoaded(...)
+    Addon:OnAddOnLoaded(...)
   end
 )

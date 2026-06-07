@@ -1,4 +1,7 @@
-FarmingPartyPlusMembers = ZO_CallbackObject:Subclass()
+local Addon = FarmingPartyPlus
+local Members = ZO_CallbackObject:Subclass()
+
+Addon.Classes.Members = Members
 
 local function NormalizeDisplayName(displayName)
   if displayName == nil or displayName == '' then
@@ -7,7 +10,7 @@ local function NormalizeDisplayName(displayName)
   return UndecorateDisplayName(displayName)
 end
 
-function FarmingPartyPlusMembers:New(saveData)
+function Members:New(saveData)
   local storage = ZO_CallbackObject.New(self)
   storage.members = saveData.members or {}
   storage.displayNameIndex = {}
@@ -21,14 +24,14 @@ function FarmingPartyPlusMembers:New(saveData)
   return storage
 end
 
-function FarmingPartyPlusMembers:Finalize()
+function Members:Finalize()
 end
 
-function FarmingPartyPlusMembers:GetMembers()
+function Members:GetMembers()
   return self.members
 end
 
-function FarmingPartyPlusMembers:GetCleanMembers()
+function Members:GetCleanMembers()
   local cleanMembers = {}
   for key, member in pairs(self.members) do
     cleanMembers[key] = {
@@ -43,7 +46,7 @@ function FarmingPartyPlusMembers:GetCleanMembers()
   return cleanMembers
 end
 
-function FarmingPartyPlusMembers:GetKeys()
+function Members:GetKeys()
   local keys = {}
   for key in pairs(self.members) do
     keys[#keys + 1] = key
@@ -52,19 +55,19 @@ function FarmingPartyPlusMembers:GetKeys()
   return keys
 end
 
-function FarmingPartyPlusMembers:GetMember(key)
+function Members:GetMember(key)
   return self.members[key]
 end
 
-function FarmingPartyPlusMembers:HasMember(key)
+function Members:HasMember(key)
   return self.members[key] ~= nil
 end
 
-function FarmingPartyPlusMembers:HasMembers()
+function Members:HasMembers()
   return next(self.members) ~= nil
 end
 
-function FarmingPartyPlusMembers:GetMemberKeyByDisplayName(displayName)
+function Members:GetMemberKeyByDisplayName(displayName)
   local normalizedDisplayName = NormalizeDisplayName(displayName)
   if normalizedDisplayName == nil then
     return nil
@@ -72,11 +75,11 @@ function FarmingPartyPlusMembers:GetMemberKeyByDisplayName(displayName)
   return self.displayNameIndex[normalizedDisplayName]
 end
 
-function FarmingPartyPlusMembers:HasDisplayName(displayName)
+function Members:HasDisplayName(displayName)
   return self:GetMemberKeyByDisplayName(displayName) ~= nil
 end
 
-function FarmingPartyPlusMembers:SetMember(key, member)
+function Members:SetMember(key, member)
   local keyExists = self:HasMember(key)
   if keyExists then
     local existingMember = self.members[key]
@@ -96,7 +99,7 @@ function FarmingPartyPlusMembers:SetMember(key, member)
   end
 end
 
-function FarmingPartyPlusMembers:UpdateDisplayName(key, displayName)
+function Members:UpdateDisplayName(key, displayName)
   local member = self:GetMember(key)
   if member == nil then
     return
@@ -119,7 +122,7 @@ function FarmingPartyPlusMembers:UpdateDisplayName(key, displayName)
   self:FireCallbacks('OnKeysUpdated')
 end
 
-function FarmingPartyPlusMembers:DeleteMember(key)
+function Members:DeleteMember(key)
   local keyExists = self:HasMember(key)
   if keyExists then
     local member = self.members[key]
@@ -134,7 +137,7 @@ function FarmingPartyPlusMembers:DeleteMember(key)
   end
 end
 
-function FarmingPartyPlusMembers:DeleteAllMembers()
+function Members:DeleteAllMembers()
   local hasMembers = self:HasMembers()
   ZO_ClearTable(self.members)
   ZO_ClearTable(self.displayNameIndex)
@@ -143,27 +146,27 @@ function FarmingPartyPlusMembers:DeleteAllMembers()
   end
 end
 
-function FarmingPartyPlusMembers:GetItemForMember(memberKey, itemLink)
+function Members:GetItemForMember(memberKey, itemLink)
   local member = self:GetMember(memberKey)
   return member.items[itemLink]
 end
 
-function FarmingPartyPlusMembers:SetItemForMember(memberKey, itemLink, item)
+function Members:SetItemForMember(memberKey, itemLink, item)
   local member = self:GetMember(memberKey)
   member.items[itemLink] = item
 end
 
-function FarmingPartyPlusMembers:DeleteItemForMember(memberKey, itemLink)
+function Members:DeleteItemForMember(memberKey, itemLink)
   local member = self:GetMember(memberKey)
   member.items[itemLink] = nil
 end
 
-function FarmingPartyPlusMembers:GetItemsForMember(key)
+function Members:GetItemsForMember(key)
   local member = self:GetMember(key)
   return member.items
 end
 
-function FarmingPartyPlusMembers:NewMember(name, displayName)
+function Members:NewMember(name, displayName)
   local newMember = {
     bestItem = { itemLink = '', value = 0 },
     totalValue = 0,
@@ -176,7 +179,7 @@ function FarmingPartyPlusMembers:NewMember(name, displayName)
   return newMember
 end
 
-function FarmingPartyPlusMembers:SetOnlineState(name, isOnline)
+function Members:SetOnlineState(name, isOnline)
   local member = self:GetMember(name)
   if member == nil then
     return
@@ -191,7 +194,7 @@ function FarmingPartyPlusMembers:SetOnlineState(name, isOnline)
   self:FireCallbacks('OnKeysUpdated')
 end
 
-function FarmingPartyPlusMembers:SetHelperActive(name, isActive)
+function Members:SetHelperActive(name, isActive)
   local member = self:GetMember(name)
   if member == nil or member.helperActive == isActive then
     return
@@ -200,7 +203,7 @@ function FarmingPartyPlusMembers:SetHelperActive(name, isActive)
   self:FireCallbacks('OnKeysUpdated')
 end
 
-function FarmingPartyPlusMembers:UpdateTotalValueAndSetBestItem(name, item, valueToAdd)
+function Members:UpdateTotalValueAndSetBestItem(name, item, valueToAdd)
   local member = self:GetMember(name)
   local bestItem = member.bestItem
   if item.value > bestItem.value then
@@ -212,7 +215,7 @@ function FarmingPartyPlusMembers:UpdateTotalValueAndSetBestItem(name, item, valu
   self:FireCallbacks('OnKeysUpdated')
 end
 
-function FarmingPartyPlusMembers:RebuildMemberTotals(name)
+function Members:RebuildMemberTotals(name)
   local member = self:GetMember(name)
   local bestItem = { itemLink = '', value = 0 }
   local totalValue = 0

@@ -9,8 +9,10 @@
 ## AddOnVersion: 30006
 ## APIVersion: 101048 101049
 ## DependsOn: LibAddonMenu-2.0 LibAsync LibPrice
+## OptionalDependsOn: LibGroupBroadcast>=95
 ## SavedVariables: FarmingPartyPlusMemberList_db FarmingPartyPlusSettings_db
 
+Bootstrap.lua
 filters/ItemCatalog.lua
 FarmingPartyPlusTemplates.xml
 FarmingPartyPlus.xml
@@ -22,6 +24,7 @@ members/MemberItem.lua
 members/MemberList.lua
 members/MemberItems.lua
 logger/Logger.lua
+pricing/Price.lua
 sync/FishingLookup.lua
 sync/Sync.lua
 filters/FilterWindow.lua
